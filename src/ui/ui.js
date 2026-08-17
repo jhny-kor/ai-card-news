@@ -39,6 +39,7 @@ async function init() {
       <input type="radio" name="tpl" value="${t.id}" ${t.id === s.template ? "checked" : ""}>
       <img id="thumb-${t.id}" alt="">
       <div class="nm">${t.name}</div><div class="ds">${t.desc || ""}</div>
+      ${t.image ? `<div class="im">이미지 · ${t.image}</div>` : ""}
     </label>`).join("");
   $("gallery").addEventListener("change", () => {
     document.querySelectorAll("#gallery label").forEach((l) =>
@@ -46,8 +47,9 @@ async function init() {
     save();
   });
 
-  // 샘플 카드로 미리보기. 실행 후에는 사용자의 1번 카드로 다시 그린다 (PLAN.md 3.5)
-  drawThumbs({ layout: "cover", title: "여기에 제목이 들어갑니다", body: "카드뉴스 표지 미리보기" },
+  // 샘플 질감을 얹어 미리보기 — 템플릿마다 이미지가 어디에 들어가는지 바로 보인다.
+  // 실행 후에는 사용자의 1번 카드 문안으로 다시 그린다 (PLAN.md 3.5)
+  drawThumbs({ layout: "cover", title: "여기에 제목이 들어갑니다", body: "카드뉴스 표지 미리보기", sample: true },
              templates.map((t) => t.id));
 
   window.api.onLog(log);
@@ -117,7 +119,7 @@ $("go").onclick = async () => {
     lastOut = r.outDir;
     $("openOut").disabled = false;
     const ids = [...document.querySelectorAll("#gallery input")].map((i) => i.value);
-    drawThumbs({ ...r.cards[0], layout: "cover" }, ids);   // 갤러리를 내 카드로 갱신
+    drawThumbs({ ...r.cards[0], layout: "cover", sample: true }, ids);   // 갤러리를 내 카드 문안으로 갱신
   } else {
     log(`실패: ${r.error}`);
   }

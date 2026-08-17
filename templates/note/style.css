@@ -1,0 +1,97 @@
+/* 노트 — 크림색 종이, 괘선, 좌측 여백선. 손으로 정리한 메모의 인상.
+
+   괘선과 여백선은 CSS 그라데이션으로 그린다. 이미지 파일이 없어야 폐쇄망 배포가 가볍고,
+   어떤 해상도에서도 선이 뭉개지지 않는다.
+   손글씨 폰트를 넣으면 인상이 확 살지만 라이선스 확인이 먼저다 (fonts/README.md). */
+
+:root {
+  --paper: #faf6ec;
+  --ink: #23303f;
+  --dim: #5a6b7d;
+  --line: rgba(35, 48, 63, .10);
+  --margin: #c96a5e;
+  --accent: #2f6f5e;
+  --lh: 78px;                       /* 괘선 간격 = 본문 행간과 맞춘다 */
+  --title: 92px;
+  --sans: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "맑은 고딕", sans-serif;
+}
+
+body {
+  color: var(--ink);
+  font-family: var(--sans);
+  background:
+    /* 좌측 여백선 */
+    linear-gradient(to right, transparent 148px, var(--margin) 148px, var(--margin) 150px, transparent 150px),
+    /* 가로 괘선 */
+    repeating-linear-gradient(to bottom,
+      var(--paper) 0, var(--paper) calc(var(--lh) - 1px),
+      var(--line) calc(var(--lh) - 1px), var(--line) var(--lh)),
+    var(--paper);
+}
+
+#bg { filter: grayscale(.5) contrast(1.05) brightness(.5) sepia(.25); }
+#scrim { background: none; }                        /* 이미지가 없으면 종이색을 덮지 않는다 */
+body.has-bg #scrim { background: rgba(35, 48, 63, .34); }
+body.has-bg { color: #fff; }
+body.has-bg #body { color: #e6e8ea; }
+
+#wrap { padding: 96px 84px 88px 190px; justify-content: center; }
+
+#kicker {
+  font-size: 26px; font-weight: 700; letter-spacing: .1em; color: var(--margin);
+  margin-bottom: 20px;
+}
+
+#title {
+  font-weight: 800;
+  font-size: calc(var(--title) * var(--title-scale));
+  line-height: 1.28;
+  letter-spacing: -0.02em;
+}
+
+#body {
+  margin-top: 32px; font-size: 40px; line-height: 1.618; color: var(--dim);
+  max-width: 16em;
+}
+
+#items { margin-top: 34px; list-style: none; }
+#items li {
+  font-size: 40px; line-height: 1.5; padding: 14px 0 14px 56px; position: relative;
+}
+#items li::before {
+  content: "✓"; position: absolute; left: 4px; top: 14px;
+  color: var(--accent); font-weight: 800;
+}
+
+#rows { margin-top: 32px; display: grid; gap: 16px; }
+#rows div {
+  font-size: 40px; line-height: 1.4; padding: 22px 26px;
+  border: 2px solid var(--line); border-left: 8px solid var(--accent);
+  background: rgba(255, 255, 255, .5);
+}
+#rows div:nth-child(2) { border-left-color: var(--margin); }
+
+#page {
+  position: absolute; right: 84px; bottom: 54px;
+  font-size: 24px; color: var(--dim); opacity: .7;
+}
+
+/* --- 레이아웃별 --- */
+body.layout-cover { --title: 118px; }
+body.layout-cover #title { text-decoration: underline; text-decoration-color: var(--accent);
+                           text-decoration-thickness: 8px; text-underline-offset: 14px; }
+body.layout-cover #body { margin-top: 40px; font-size: 42px; }
+
+body.layout-number { --title: 230px; }
+body.layout-number #title { color: var(--accent); letter-spacing: -0.04em; }
+body.layout-number #body { font-size: 44px; color: var(--ink); }
+
+body.layout-quote #title { font-size: 28px; font-weight: 700; color: var(--margin); order: 2; margin-top: 34px; }
+body.layout-quote #body {
+  font-size: 58px; font-weight: 700; line-height: 1.42; margin-top: 0;
+  color: var(--ink); max-width: none; text-indent: -0.45em;
+}
+body.layout-quote #body::before { content: "“"; }
+body.layout-quote #body::after { content: "”"; }
+
+body.layout-closing #title { font-size: calc(70px * var(--title-scale)); }

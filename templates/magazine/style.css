@@ -1,0 +1,94 @@
+/* 매거진 에디토리얼 — 넉넉한 여백, 명조 제목 + 고딕 본문, 가는 헤어라인.
+   장식을 쓰지 않고 여백과 활자 크기 차이만으로 위계를 만든다. */
+
+:root {
+  --paper: #fbfaf8;
+  --ink: #14161a;
+  --dim: #676c74;
+  --hair: #14161a;
+  --accent: #8c3b2e;
+  --title: 92px;
+  --serif: "Nanum Myeongjo", "Apple SD Gothic Neo", Batang, "바탕", serif;
+  --sans: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "맑은 고딕", sans-serif;
+}
+
+body { background: var(--paper); color: var(--ink); font-family: var(--sans); }
+
+#bg { filter: grayscale(1) contrast(1.06) brightness(.45); }
+#scrim { background: none; }                        /* 이미지가 없으면 종이색을 덮지 않는다 */
+body.has-bg #scrim { background: rgba(20, 22, 26, .3); }
+body.has-bg { color: #fff; }
+body.has-bg #body { color: #dcdee1; }
+body.has-bg #page { color: rgba(255, 255, 255, .6); }
+
+#wrap { padding: 110px 120px 100px; justify-content: center; }
+
+#kicker {
+  font-size: 24px; font-weight: 700; letter-spacing: .28em; color: var(--accent);
+  margin-bottom: 34px;
+}
+
+#title {
+  font-family: var(--serif); font-weight: 700;
+  font-size: calc(var(--title) * var(--title-scale));
+  line-height: 1.34;
+  letter-spacing: -0.01em;
+}
+
+#body {
+  margin-top: 44px; padding-top: 34px; border-top: 1px solid var(--hair);
+  font-size: 38px; line-height: 1.618; color: var(--dim); max-width: 17em;
+}
+body.has-bg #body { border-top-color: rgba(255, 255, 255, .45); }
+
+#items { margin-top: 44px; padding-top: 10px; border-top: 1px solid var(--hair); list-style: none; counter-reset: n; }
+#items li {
+  counter-increment: n; font-size: 38px; line-height: 1.5;
+  padding: 24px 0 24px 92px; position: relative;
+}
+#items li + li { border-top: 1px solid rgba(20, 22, 26, .12); }
+#items li::before {
+  content: counter(n); position: absolute; left: 0; top: 22px;
+  font-family: var(--serif); font-size: 44px; color: var(--accent);
+}
+
+#rows { margin-top: 44px; display: grid; gap: 0; }
+#rows div {
+  font-size: 40px; line-height: 1.4; padding: 34px 0;
+  border-top: 1px solid var(--hair);
+}
+#rows div:last-child { border-bottom: 1px solid var(--hair); }
+#rows div::before {
+  content: ""; display: inline-block; width: 26px; height: 2px;
+  background: var(--accent); vertical-align: middle; margin-right: 20px;
+}
+
+#page {
+  position: absolute; left: 120px; bottom: 66px;
+  font-size: 23px; letter-spacing: .18em; color: var(--dim);
+}
+
+/* --- 레이아웃별 --- */
+body.layout-cover { --title: 118px; }
+body.layout-cover #wrap { justify-content: center; }
+body.layout-cover #title { line-height: 1.24; }
+body.layout-cover #body { font-size: 40px; }
+
+body.layout-number { --title: 220px; }
+body.layout-number #title { color: var(--accent); line-height: 1; }
+body.layout-number #body { font-size: 42px; color: var(--ink); }
+
+body.layout-quote #wrap { justify-content: center; }
+body.layout-quote #title {
+  font-family: var(--sans); font-size: 26px; font-weight: 600; letter-spacing: .1em;
+  color: var(--dim); order: 2; margin-top: 40px; padding-top: 26px; border-top: 1px solid var(--hair);
+}
+body.layout-quote #body {
+  font-family: var(--serif); font-size: 60px; line-height: 1.5; font-weight: 700;
+  margin-top: 0; padding-top: 0; border-top: none; color: var(--ink);
+  max-width: none; text-indent: -0.5em;
+}
+body.layout-quote #body::before { content: "“"; }
+body.layout-quote #body::after { content: "”"; }
+
+body.layout-closing #title { font-size: calc(66px * var(--title-scale)); }

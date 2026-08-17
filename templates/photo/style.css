@@ -1,0 +1,90 @@
+/* 사진 위 타이포 — 전면 이미지 + 가독용 스크림 + 흰 글자.
+   이미지가 없으면 짙은 단색으로 떨어진다.
+
+   스크림에 그라데이션을 쓰지만 kill-ai-slop #01·#06과는 다르다.
+   #01은 인디고→바이올렛 브랜드 그라데이션, #06은 카드 표면 자체가 그라데이션인 경우다.
+   여기 스크림은 사진 위 글자를 읽히게 하는 무채색 기능 레이어로, 실제 편집 디자인의 관행이다. */
+
+:root {
+  --fg: #ffffff;
+  --dim: #d6d8db;
+  --accent: #ffffff;
+  --fallback: #1a1c20;
+  --title: 104px;
+  --sans: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "맑은 고딕", sans-serif;
+}
+
+body { background: var(--fallback); color: var(--fg); font-family: var(--sans); }
+
+#bg { filter: grayscale(.35) contrast(1.08) brightness(.62) saturate(.8); }
+#scrim { background: linear-gradient(to top, rgba(0, 0, 0, .86) 0%, rgba(0, 0, 0, .5) 45%, rgba(0, 0, 0, .3) 100%); }
+body:not(.has-bg) #scrim { background: none; }
+
+#wrap { padding: 92px 84px 88px; justify-content: flex-end; }
+
+#kicker {
+  font-size: 26px; font-weight: 700; letter-spacing: .2em;
+  margin-bottom: 22px; color: var(--fg);
+}
+
+#title {
+  font-weight: 800;
+  font-size: calc(var(--title) * var(--title-scale));
+  line-height: 1.18;
+  letter-spacing: -0.035em;
+  text-shadow: 0 2px 24px rgba(0, 0, 0, .45);       /* 밝은 사진에서도 읽히게 */
+}
+#title::before {
+  content: ""; display: block;
+  width: 88px; height: 6px; background: var(--accent);
+  margin-bottom: 30px;
+}
+
+#body {
+  margin-top: 30px; font-size: 40px; line-height: 1.618; color: var(--dim);
+  max-width: 16em; text-shadow: 0 1px 14px rgba(0, 0, 0, .5);
+}
+
+#items { margin-top: 34px; list-style: none; counter-reset: n; }
+#items li {
+  counter-increment: n; font-size: 40px; line-height: 1.45; font-weight: 600;
+  padding: 16px 0 16px 72px; position: relative;
+}
+#items li::before {
+  content: counter(n); position: absolute; left: 0; top: 16px;
+  font-weight: 800; opacity: .6;
+}
+
+#rows { margin-top: 34px; display: grid; gap: 14px; }
+#rows div {
+  font-size: 42px; font-weight: 600; line-height: 1.35;
+  padding: 26px 30px; background: rgba(255, 255, 255, .12);
+  border-left: 6px solid var(--accent);
+}
+#rows div:nth-child(2) { border-left-color: rgba(255, 255, 255, .4); }
+
+#page {
+  position: absolute; right: 84px; bottom: 52px;
+  font-size: 24px; letter-spacing: .12em; color: rgba(255, 255, 255, .65);
+}
+
+/* --- 레이아웃별 --- */
+body.layout-cover { --title: 140px; }
+body.layout-cover #body { margin-top: 36px; font-size: 44px; color: #eceef0; }
+
+body.layout-number { --title: 260px; }
+body.layout-number #wrap { justify-content: center; }
+body.layout-number #title::before { display: none; }
+body.layout-number #body { font-size: 46px; color: var(--fg); }
+
+body.layout-quote #wrap { justify-content: center; }
+body.layout-quote #title { font-size: 28px; font-weight: 600; order: 2; margin-top: 36px; color: var(--dim); text-shadow: none; }
+body.layout-quote #title::before { display: none; }
+body.layout-quote #body {
+  font-size: 64px; font-weight: 700; line-height: 1.38; margin-top: 0;
+  color: var(--fg); max-width: none; text-indent: -0.45em;
+}
+body.layout-quote #body::before { content: "“"; }
+body.layout-quote #body::after { content: "”"; }
+
+body.layout-closing #title { font-size: calc(76px * var(--title-scale)); }

@@ -1,0 +1,52 @@
+/* 상하 분할 — 위 절반이 이미지, 아래가 단색 텍스트 영역.
+   이미지 자리가 고정이라 어떤 사진을 넣어도 구도가 흔들리지 않는다. */
+
+:root {
+  --bg: #17232b;
+  --fg: #f4f2ec;
+  --accent: #e0a03c;
+  --split: 46%;                       /* 이미지 영역 높이 */
+  --title: 84px;
+  --sans: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "맑은 고딕", sans-serif;
+}
+
+body { background: var(--bg); color: var(--fg); font-family: var(--sans); }
+
+/* 이미지를 상단 밴드로 고정한다. #bg는 위치만 CSS로 잡으면 되므로 골격 수정이 필요 없다 */
+#bg { inset: 0 0 calc(100% - var(--split)) 0; filter: contrast(1.05) saturate(.85); }
+#scrim { inset: 0 0 calc(100% - var(--split)) 0; background: rgba(23, 35, 43, .18); }
+/* 이미지가 없으면 자리를 접는다. 빈 사각형이 남으면 미완성으로 보인다.
+   실제 덱에서는 표지·서술 카드만 이미지를 받으므로 절반은 이 경로를 탄다. */
+body:not(.has-bg) { --split: 0%; }
+body:not(.has-bg) #bg, body:not(.has-bg) #scrim { display: none; }
+body:not(.has-bg) #wrap { justify-content: center; padding-top: 96px; }
+
+#wrap { padding: calc(var(--split) + 66px) 78px 76px; justify-content: flex-start; }
+
+#kicker { font-size: 25px; font-weight: 700; letter-spacing: .18em; color: var(--accent); margin-bottom: 20px; }
+
+#title { font-weight: 800; font-size: calc(var(--title) * var(--title-scale)); line-height: 1.22; letter-spacing: -.03em; }
+
+#body { margin-top: 28px; font-size: 38px; line-height: 1.618; color: rgba(244, 242, 236, .76); max-width: 16em; }
+
+#items { margin-top: 30px; list-style: none; counter-reset: n; }
+#items li { counter-increment: n; font-size: 37px; line-height: 1.4; font-weight: 600; padding: 13px 0 13px 66px; position: relative; }
+#items li::before { content: counter(n); position: absolute; left: 0; top: 13px; color: var(--accent); font-weight: 800; }
+
+#rows { margin-top: 30px; display: grid; gap: 12px; }
+#rows div { font-size: 38px; font-weight: 600; padding: 22px 26px; background: rgba(244, 242, 236, .1); border-left: 7px solid var(--accent); }
+#rows div:nth-child(2) { border-left-color: rgba(244, 242, 236, .35); }
+
+#page { position: absolute; right: 78px; bottom: 52px; font-size: 24px; letter-spacing: .1em; color: rgba(244, 242, 236, .5); }
+
+/* --- 레이아웃별 --- */
+body.layout-cover { --title: 106px; --split: 52%; }
+body.layout-number { --title: 190px; }
+body.layout-number #title { color: var(--accent); }
+body.layout-number #body { font-size: 40px; color: var(--fg); }
+body.layout-quote #title { font-size: 26px; font-weight: 600; color: var(--accent); order: 2; margin-top: 28px; }
+body.layout-quote #body { font-size: 50px; font-weight: 700; line-height: 1.4; margin-top: 0; color: var(--fg); max-width: none; text-indent: -.45em; }
+body.layout-quote #body::before { content: "“"; }
+body.layout-quote #body::after { content: "”"; }
+body.layout-list, body.layout-compare { --split: 34%; }
+body.layout-closing { --split: 40%; }

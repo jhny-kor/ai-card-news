@@ -27,9 +27,29 @@
 <script>
 const $ = (id) => document.getElementById(id);
 
-function render(d) {
+/** 스타일시트 교체를 기다린다. href가 그대로면 load 이벤트가 안 오므로 즉시 통과시킨다. */
+function loadCss(href) {
+  const link = $("tpl");
+  if (!href || link.getAttribute("href") === href) return Promise.resolve();
+  return new Promise((resolve) => {
+    link.addEventListener("load", resolve, { once: true });
+    link.addEventListener("error", resolve, { once: true });
+    link.href = href;
+    setTimeout(resolve, 3000);                        // 안전장치
+  });
+}
+
+/** 배경 이미지 디코드까지 기다린다. 안 기다리면 이미지 없는 프레임이 캡처된다. */
+function loadImage(src) {
+  if (!src) return Promise.resolve();
+  const img = new Image();
+  img.src = src;
+  return img.decode().catch(() => {});
+}
+
+async function render(d) {
   document.body.className = `layout-${d.layout || "statement"}`;
-  $("tpl").href = d.css || "";
+  await loadCss(d.css || "");
 
   $("title").textContent = d.title || "";
   $("kicker").textContent = d.kicker || "";
@@ -58,14 +78,22 @@ function render(d) {
   const n = (d.title || "").length;
   document.documentElement.style.setProperty("--title-scale", n > 22 ? 0.62 : n > 14 ? 0.8 : 1);
   document.documentElement.style.setProperty("--lines", lines.length || 1);
+
+  await loadImage(hasBg ? d.image : null);
+  await document.fonts.ready;
+  return settled();
 }
 
 function esc(s) {
   return s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
 }
 
-/** 렌더 완료 신호 — main이 이걸 기다린 뒤 캡처한다 */
+/** 렌더 완료 신호 — main이 이걸 기다린 뒤 캡처한다. 3프레임을 넘겨야 합성기까지 반영된다. */
 function settled() {
-  return new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(true))));
+  return new Promise((r) => {
+    let n = 3;
+    const tick = () => (--n > 0 ? requestAnimationFrame(tick) : r(true));
+    requestAnimationFrame(tick);
+  });
 }
 </script>

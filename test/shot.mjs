@@ -56,7 +56,16 @@ app.whenReady().then(async () => {
       webPreferences: { preload: path.join(ROOT, "src", "preload.cjs"), sandbox: false, spellcheck: false },
     });
     await win.loadFile(path.join(ROOT, "src", "ui", "index.html"));
-    await new Promise((r) => setTimeout(r, 2200));
+    // 썸네일이 다 그려질 때까지 기다린다. 고정 대기로는 템플릿이 늘면 빈 칸이 찍힌다.
+    for (let i = 0; i < 60; i++) {
+      const done = await win.webContents.executeJavaScript(`(() => {
+        const all = [...document.querySelectorAll('#gallery img')];
+        return all.length > 0 && all.every(i => i.src.startsWith('data:') && i.complete);
+      })()`);
+      if (done) break;
+      await new Promise((r) => setTimeout(r, 500));
+    }
+    await new Promise((r) => setTimeout(r, 300));
 
     await win.webContents.executeJavaScript(`
       document.getElementById("files").textContent = "1개: 전세사기 예방 안내.pdf";
@@ -76,9 +85,14 @@ app.whenReady().then(async () => {
     console.log(`docs/ui-${theme}.png`);
   }
 
-  // 결과 카드 예시
+  // 결과 카드 예시 — 텍스트 전용(newspaper)과 이미지 배치(split) 두 벌
   const out = await renderCards(CARDS, { template: "newspaper", outDir: path.join(DOCS, "sample") });
   console.log(`샘플 카드 ${out.length}장`);
+
+  const tex = { ext: "jpg", data: await fs.readFile(path.join(ROOT, "templates", "_samples", "dusk.jpg")) };
+  const withImg = CARDS.map((c, i) => (i === 0 || i === 1 ? { ...c, image: tex } : c));
+  const out2 = await renderCards(withImg, { template: "split", outDir: path.join(DOCS, "sample-split") });
+  console.log(`이미지 배치 예시 ${out2.length}장`);
 
   closeRenderWindow();
   app.exit(0);

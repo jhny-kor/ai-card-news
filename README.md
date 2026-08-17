@@ -15,10 +15,14 @@
 |---|---|
 | ![](docs/ui-light.png) | ![](docs/ui-dark.png) |
 
-템플릿 썸네일은 샘플 목업이 아니라 **방금 만든 1번 카드를 각 템플릿으로 실제 렌더한 것**이다.
+템플릿 썸네일은 목업이 아니라 **실제로 렌더한 것**이고, 실행 후에는 방금 만든 1번 카드 문안으로 다시 그려진다.
 "예쁜 샘플"이 아니라 "내 글이 저기서 어떻게 보이나"로 고르게 된다.
 
-### 결과 (신문 헤드라인체, 레이아웃 6종)
+썸네일에는 샘플 질감이 얹혀 있어 **이미지가 템플릿의 어디에 들어가는지** 미리 보인다
+(카드 아래 `이미지 · 상단 46%` 같은 표시). 샘플은 스톡 사진이 아니라
+`test/make-samples.mjs`가 SVG 노이즈로 생성한 것이라 라이선스가 깨끗하다.
+
+### 결과 — 텍스트 전용 (신문 헤드라인체, 레이아웃 6종)
 
 <p>
 <img src="docs/sample/card_01.png" width="32%"> <img src="docs/sample/card_02.png" width="32%"> <img src="docs/sample/card_03.png" width="32%"><br>
@@ -27,6 +31,32 @@
 
 카드마다 레이아웃이 다르다 — 표지 / 서술 / 수치 / 목록 / 대비 / 마무리.
 전부 같은 꼴로 찍어내면 그 자체가 AI 티라서, 레이아웃을 섞는 것이 설계의 일부다.
+
+### 결과 — 이미지 배치 (상하 분할)
+
+<p>
+<img src="docs/sample-split/card_01.png" width="32%"> <img src="docs/sample-split/card_02.png" width="32%"> <img src="docs/sample-split/card_03.png" width="32%">
+</p>
+
+앞 두 장은 이미지가 있고 세 번째는 없다. **이미지가 없으면 자리를 접는다** —
+빈 사각형을 남기면 미완성으로 보이기 때문이다. 실제 덱에서는 표지와 서술 카드만 이미지를 받으므로
+절반 정도가 이 경로를 탄다.
+
+### 템플릿 8종
+
+| 템플릿 | 이미지 자리 | 성격 |
+|---|---|---|
+| 신문 헤드라인체 | 전면 배경 | 무채색 + 굵은 명조 + 가는 괘선. 시사·정책 자료 |
+| 단색 초대형 고딕 | 전면 배경 | 배경 한 색, 글자가 화면을 꽉 채운다 |
+| 사진 위 타이포 | 전면 배경 | 어두운 스크림 위 흰 글자 |
+| 노트 | 전면 배경 | 크림색 종이에 괘선. 친근한 톤 |
+| 매거진 에디토리얼 | 전면 배경 | 넉넉한 여백, 장식 없이 활자만으로 위계 |
+| 상하 분할 | 상단 46% | 위가 사진, 아래가 글. 가장 안정적 |
+| 사진 카드 | 상단 사각형 | 종이에 사진을 붙인 인화물 |
+| 좌우 분할 | 좌측 38% | 세로로 긴 사진에 맞다 |
+
+전부 [kill-ai-slop](https://github.com/yetone/kill-ai-slop)의 시각 tell 목록을 피해서 만들었다 —
+인디고→바이올렛 그라데이션, 글로우, 글래스모피즘, 과대 그림자, 이모지, 아이콘 타일 없음.
 
 ---
 
@@ -105,8 +135,9 @@ AI 카드뉴스는 모든 카드 길이가 균일한데, 금칙어로는 안 잡
 npm install
 npm start                              # 앱 실행
 npm run selftest                       # 린터·파서 (네트워크 불필요)
-npx electron test/render-test.mjs      # 렌더 — test/out/ 에 카드가 나온다
+npx electron test/render-test.mjs      # 렌더 8종 × 7장 — test/out/ 에 나온다
 npx electron test/ui-test.mjs          # UI 스모크
+npx electron test/shot.mjs             # README용 화면 캡처 갱신
 ```
 
 ### 템플릿 추가
@@ -115,4 +146,13 @@ npx electron test/ui-test.mjs          # UI 스모크
 골격은 `templates/card.html`이 공유하고, 레이아웃 7종(`cover` `statement` `list` `quote` `number`
 `compare` `closing`)은 body 클래스로 구분한다.
 
-`legacy/`에 초기 파이썬 버전이 있다. 참고용이며 더 이상 쓰지 않는다.
+**이미지 자리도 CSS로 정한다.** `#bg`는 그냥 절대배치 div라서 템플릿이 위치를 잡으면 된다:
+
+```css
+#bg { inset: 0 0 54% 0; }                      /* 상단 46% */
+body:not(.has-bg) { --split: 0%; }             /* 이미지 없으면 자리를 접는다 */
+body:not(.has-bg) #bg { display: none; }
+```
+
+`meta.json`의 `image` 필드에 자리를 적어두면 갤러리에 표시된다.
+샘플 질감을 다시 만들려면 `electron test/make-samples.mjs`.

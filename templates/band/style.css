@@ -1,0 +1,49 @@
+/* 좌우 분할 — 왼쪽 띠가 이미지, 오른쪽이 글.
+   세로로 긴 사진이나 인물 사진이 있을 때 상하 분할보다 낫다. */
+
+:root {
+  --bg: #f7f5f1;
+  --ink: #191b1f;
+  --dim: #5f646b;
+  --accent: #9c4221;
+  --band: 38%;                        /* 이미지 폭 */
+  --title: 72px;
+  --sans: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "맑은 고딕", sans-serif;
+}
+
+body { background: var(--bg); color: var(--ink); font-family: var(--sans); }
+
+#bg { inset: 0 auto 0 0; width: var(--band); filter: grayscale(.25) contrast(1.05) saturate(.85); }
+#scrim { display: none; }
+/* 이미지가 없으면 띠를 접는다 */
+body:not(.has-bg) { --band: 0%; }
+body:not(.has-bg) #bg { display: none; }
+
+#wrap { padding: 92px 74px 84px calc(var(--band) + 66px); justify-content: center; }
+
+#kicker { font-size: 23px; font-weight: 700; letter-spacing: .2em; color: var(--accent); margin-bottom: 18px; }
+
+#title { font-weight: 800; font-size: calc(var(--title) * var(--title-scale)); line-height: 1.26; letter-spacing: -.025em; }
+
+#body { margin-top: 26px; font-size: 34px; line-height: 1.618; color: var(--dim); }
+
+#items { margin-top: 28px; list-style: none; counter-reset: n; }
+#items li { counter-increment: n; font-size: 33px; line-height: 1.45; padding: 12px 0 12px 54px; position: relative; }
+#items li::before { content: counter(n); position: absolute; left: 0; top: 12px; color: var(--accent); font-weight: 800; }
+
+#rows { margin-top: 28px; display: grid; gap: 12px; }
+#rows div { font-size: 34px; line-height: 1.4; padding: 20px 24px; background: rgba(25, 27, 31, .05); border-left: 6px solid var(--accent); }
+#rows div:nth-child(2) { border-left-color: rgba(25, 27, 31, .25); }
+
+#page { position: absolute; right: 74px; bottom: 50px; font-size: 22px; letter-spacing: .1em; color: var(--dim); }
+
+/* --- 레이아웃별 --- */
+body.layout-cover { --title: 88px; --band: 34%; }
+body.layout-number { --title: 158px; }
+body.layout-number #title { color: var(--accent); }
+body.layout-number #body { font-size: 36px; color: var(--ink); }
+body.layout-quote #title { font-size: 24px; font-weight: 600; color: var(--accent); order: 2; margin-top: 26px; }
+body.layout-quote #body { font-size: 44px; font-weight: 700; line-height: 1.42; margin-top: 0; color: var(--ink); text-indent: -.45em; }
+body.layout-quote #body::before { content: "“"; }
+body.layout-quote #body::after { content: "”"; }
+body.layout-closing { --band: 30%; }

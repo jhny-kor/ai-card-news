@@ -24,7 +24,15 @@ app.whenReady().then(async () => {
   win.webContents.on("preload-error", (_e, f, err) => errors.push(`preload: ${err.message}`));
 
   await win.loadFile(path.join(SRC, "ui", "index.html"));
-  await new Promise((r) => setTimeout(r, 2500));          // init()과 썸네일 렌더 대기
+  // 썸네일이 다 그려질 때까지 기다린다 (템플릿 수에 비례해 오래 걸린다)
+  for (let i = 0; i < 60; i++) {
+    const done = await win.webContents.executeJavaScript(`(() => {
+      const all = [...document.querySelectorAll('#gallery img')];
+      return all.length > 0 && all.every(i => i.src.startsWith('data:'));
+    })()`);
+    if (done) break;
+    await new Promise((r) => setTimeout(r, 500));
+  }
 
   const state = await win.webContents.executeJavaScript(`(() => ({
     api: typeof window.api,

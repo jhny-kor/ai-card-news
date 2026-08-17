@@ -1,5 +1,5 @@
 /** 카드 → PNG. Electron 내장 Chromium으로 그린다(Playwright 불필요). PLAN.md 1 */
-import { BrowserWindow } from "electron";
+import { BrowserWindow, nativeImage } from "electron";
 import path from "node:path";
 import fs from "node:fs/promises";
 import { fileURLToPath } from "node:url";
@@ -45,6 +45,18 @@ export function closeRenderWindow() {
 
 const dataUri = (img) => `data:image/${img.ext === "jpg" ? "jpeg" : img.ext};base64,${img.data.toString("base64")}`;
 
+/** 갤러리 미리보기용 샘플 질감. 이미지 자리가 어디인지 보이게 하려고 쓴다.
+ *  스톡 사진이 아니라 test/make-samples.mjs가 생성한 것이라 라이선스가 깨끗하다. */
+let sampleCache;
+async function sampleImage() {
+  if (sampleCache === undefined) {
+    try {
+      sampleCache = { ext: "jpg", data: await fs.readFile(path.join(TEMPLATES, "_samples", "dusk.jpg")) };
+    } catch { sampleCache = null; }
+  }
+  return sampleCache;
+}
+
 /** cards[i].image 는 {ext,data} 또는 없음. 반환: 저장된 파일 경로 배열 */
 export async function renderCards(cards, { template, outDir }) {
   const cssUrl = "file://" + path.join(TEMPLATES, template, "style.css");
@@ -52,6 +64,7 @@ export async function renderCards(cards, { template, outDir }) {
 
   return withWindow(async (win) => {
     const files = [];
+    let prev = null;
     for (const [i, card] of cards.entries()) {
       const payload = {
         ...card,
@@ -61,31 +74,53 @@ export async function renderCards(cards, { template, outDir }) {
         image: card.image ? dataUri(card.image) : null,
       };
       delete payload.image_hint;
-      await win.webContents.executeJavaScript(
-        `render(${JSON.stringify(payload)}); settled();`, true);
-      let shot = await win.webContents.capturePage();
-      if (shot.getSize().width !== SIZE) shot = shot.resize({ width: SIZE, height: SIZE });
+      const png = await paint(win, payload, prev);
+      prev = png;
       const out = path.join(outDir, `card_${String(i + 1).padStart(2, "0")}.png`);
-      await fs.writeFile(out, shot.toPNG());
+      await fs.writeFile(out, png);
       files.push(out);
     }
     return files;
   });
 }
 
+/**
+ * 한 장을 그리고 캡처한다.
+ * capturePage는 합성기의 '현재' 프레임을 준다. 창을 재사용하면 새 내용이 올라오기 전에
+ * 직전 카드의 프레임을 잡는 일이 실제로 생긴다(표지 자리에 마무리 카드가 찍혔다).
+ * 그래서 캡처 결과가 직전 장과 완전히 같으면 한 번 더 기다렸다가 다시 잡는다.
+ */
+const WAITS = [40, 100, 220, 400, 650];
+
+async function paint(win, payload, prev, { strict = true } = {}) {
+  await win.webContents.executeJavaScript(`render(${JSON.stringify(payload)})`, true);
+  let last = null;
+  for (const wait of WAITS) {
+    await new Promise((r) => setTimeout(r, wait));
+    let shot = await win.webContents.capturePage();
+    if (shot.getSize().width !== SIZE) shot = shot.resize({ width: SIZE, height: SIZE });
+    last = shot.toPNG();
+    if (!prev || !last.equals(prev)) return last;
+  }
+  // 결과물은 틀리느니 실패하는 게 낫다. 썸네일은 장식이라 그냥 넘어간다.
+  if (strict) throw new Error("카드 렌더가 직전 장과 동일하게 나왔습니다 (캡처 경합)");
+  return last;
+}
+
 /** 템플릿 갤러리용 썸네일 — 사용자의 실제 1번 카드를 각 템플릿으로 그린다 (PLAN.md 3.5) */
 export async function previewTemplates(card, templates) {
+  const img = card.image || (card.sample ? await sampleImage() : null);
   return withWindow(async (win) => {
     const out = {};
+    let prev = null;
     for (const t of templates) {
       const payload = {
         ...card, css: "file://" + path.join(TEMPLATES, t, "style.css"),
-        page: 1, total: 1, image: card.image ? dataUri(card.image) : null,
+        page: 1, total: 1, image: img ? dataUri(img) : null,
       };
       delete payload.image_hint;
-      await win.webContents.executeJavaScript(`render(${JSON.stringify(payload)}); settled();`, true);
-      const shot = (await win.webContents.capturePage()).resize({ width: 300, height: 300 });
-      out[t] = shot.toDataURL();
+      prev = await paint(win, payload, prev, { strict: false });
+      out[t] = nativeImage.createFromBuffer(prev).resize({ width: 300, height: 300 }).toDataURL();
     }
     return out;
   });

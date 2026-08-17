@@ -23,6 +23,15 @@ app.whenReady().then(async () => {
   console.log("템플릿:", templates.join(", "));
   if (!templates.length) { console.error("템플릿이 없다"); app.exit(1); }
 
+  // 표지에 실제 이미지를 얹어 has-bg 경로도 렌더한다. 사진 위 타이포는 이게 본체다.
+  const fixture = path.join(path.dirname(fileURLToPath(import.meta.url)), "fixtures", "fixture.pdf");
+  if (fs.existsSync(fixture)) {
+    const { collect } = await import("../src/lib/parse.js");
+    const { images } = await collect([fixture]);
+    if (images[0]) { CARDS[0].image = images[0]; console.log(`표지 이미지: ${images[0].w}x${images[0].h}`); }
+    else { console.error("픽스처에서 이미지를 못 얻었다"); bad++; }
+  }
+
   for (const t of templates) {
     const dir = path.join(OUT, t);
     const files = await renderCards(CARDS, { template: t, outDir: dir });
