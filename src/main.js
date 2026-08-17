@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { collect } from "./lib/parse.js";
 import { lint, repairPrompt } from "./lib/lint.js";
 import * as llm from "./lib/llm.js";
+import { attachImages } from "./lib/images.js";
 import { renderCards, listTemplates, previewTemplates, closeRenderWindow } from "./lib/render.js";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -48,40 +49,6 @@ async function saveSettings(cfg) {
   await fs.writeFile(SETTINGS(), JSON.stringify(out, null, 2), "utf8");
 }
 
-// --------------------------------------------------------------- 이미지 배분
-
-/** 추출본을 먼저 붙이고, 모자란 만큼만 생성한다. PLAN.md 4.4 */
-async function attachImages(cards, pool, cfg, log) {
-  const targets = cards.filter((c) => c.layout === "cover" || c.layout === "statement");
-  if (!targets.length) return;
-
-  const spare = [...pool];
-  for (const card of targets) {
-    if (!spare.length) break;
-    card.image = spare.shift();
-  }
-  const filled = targets.filter((c) => c.image).length;
-  log(`이미지: 자료에서 ${filled}장 배정 (추출 ${pool.length}장)`);
-
-  const missing = targets.filter((c) => !c.image);
-  if (!missing.length || !cfg.generateImages) {
-    if (missing.length) log(`${missing.length}장은 이미지 없이 갑니다 (생성 꺼짐)`);
-    return;
-  }
-  const todo = missing.slice(0, cfg.maxGenerate);
-  log(`부족분 ${todo.length}장 생성합니다 (상한 ${cfg.maxGenerate}장)`);
-  for (const [i, card] of todo.entries()) {
-    const hint = card.image_hint || "soft blurred texture, muted tones, empty space";
-    log(`  생성 ${i + 1}/${todo.length}: ${hint.slice(0, 50)}…`);
-    try {
-      card.image = { ext: "png", data: await llm.generateImage(cfg, hint) };
-    } catch (e) {
-      log(`  생성 실패: ${e.message}`);
-      break;                                             // 첫 실패에서 멈춘다. 과금·시간 낭비 방지
-    }
-  }
-}
-
 // --------------------------------------------------------------- 파이프라인
 
 async function run({ files, cfg }, log) {
@@ -112,7 +79,7 @@ async function run({ files, cfg }, log) {
     log("AI 티 검사 통과");
   }
 
-  await attachImages(cards, images, cfg, log);
+  await attachImages(cards, images, cfg, { generate: (hint) => llm.generateImage(cfg, hint), log });
 
   log("이미지 렌더링 중…");
   const outDir = cfg.outDir || path.join(app.getPath("documents"), "카드뉴스");
@@ -177,4 +144,4 @@ app.whenReady().then(() => {
 
 app.on("window-all-closed", () => process.platform !== "darwin" && app.quit());
 
-export { run, attachImages };
+export { run };

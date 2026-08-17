@@ -7,6 +7,7 @@ import { zipSync, strToU8 } from "fflate";
 import { lint, repairPrompt } from "../src/lib/lint.js";
 import { parseCards, endpoint, buildPrompt } from "../src/lib/llm.js";
 import { readSource, filterImages } from "../src/lib/parse.js";
+import { attachImages } from "../src/lib/images.js";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ids = (issues) => new Set(issues.map((i) => i.id));
@@ -144,6 +145,64 @@ await test("품질 필터: 로고·구분선·중복을 버린다", () => {
   const tiny = { data: Buffer.alloc(1_000, 4), w: 1200, h: 900, ext: "png" };
   const ok = { data: Buffer.alloc(40_000, 5), w: 1200, h: 900, ext: "png" };
   assert.deepEqual(filterImages([logo, rule, tiny, ok, { ...ok }]).map((i) => i.w), [1200]);
+});
+
+// --------------------------------------------------------------- 이미지 배분
+
+const deck = () => [
+  { layout: "cover", title: "표지" },
+  { layout: "statement", title: "서술1" },
+  { layout: "list", title: "목록" },
+  { layout: "statement", title: "서술2" },
+  { layout: "closing", title: "마무리" },
+];
+const img = (n) => ({ ext: "png", data: Buffer.alloc(100, n) });
+const off = { generateImages: false, maxGenerate: 3 };
+const on = { generateImages: true, maxGenerate: 3 };
+
+await test("추출본을 표지·서술 카드에만 큰 순서로 붙인다", async () => {
+  const cards = deck();
+  const r = await attachImages(cards, [img(1), img(2)], off);
+  assert.deepEqual(r, { assigned: 2, generated: 0 });
+  assert.ok(cards[0].image && cards[1].image, "표지와 첫 서술에 붙어야 한다");
+  assert.ok(!cards[2].image && !cards[4].image, "목록·마무리에는 안 붙는다");
+  assert.ok(!cards[3].image, "추출본이 모자라면 비워둔다");
+});
+
+await test("생성이 꺼져 있으면 부족분을 그냥 비운다", async () => {
+  const cards = deck();
+  let called = 0;
+  const r = await attachImages(cards, [], off, { generate: async () => { called++; return Buffer.alloc(9); } });
+  assert.deepEqual(r, { assigned: 0, generated: 0 });
+  assert.equal(called, 0, "생성 꺼짐인데 호출됐다");
+});
+
+await test("부족분만 생성하고 상한을 지킨다", async () => {
+  const cards = [...deck(), { layout: "statement", title: "서술3" }, { layout: "statement", title: "서술4" }];
+  let called = 0;
+  const r = await attachImages(cards, [img(1)], { generateImages: true, maxGenerate: 2 },
+                               { generate: async () => { called++; return Buffer.alloc(9); } });
+  assert.equal(r.assigned, 1);
+  assert.equal(r.generated, 2, "상한 2장을 넘었다");
+  assert.equal(called, 2);
+});
+
+await test("image_hint를 생성 프롬프트로 넘긴다", async () => {
+  const cards = [{ layout: "cover", title: "표지", image_hint: "concrete texture" }];
+  const seen = [];
+  await attachImages(cards, [], on, { generate: async (h) => { seen.push(h); return Buffer.alloc(9); } });
+  assert.deepEqual(seen, ["concrete texture"]);
+});
+
+await test("생성 첫 실패에서 멈춘다 (과금·시간 낭비 방지)", async () => {
+  const cards = [{ layout: "cover", title: "ㄱ" }, { layout: "statement", title: "ㄴ" },
+                 { layout: "statement", title: "ㄷ" }];
+  let called = 0;
+  const r = await attachImages(cards, [], on, {
+    generate: async () => { called++; throw new Error("403"); },
+  });
+  assert.equal(called, 1, `첫 실패 후에도 ${called}번 호출됐다`);
+  assert.equal(r.generated, 0);
 });
 
 console.log(`\n${n}개 통과`);
