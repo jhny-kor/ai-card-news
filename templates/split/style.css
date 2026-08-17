@@ -25,7 +25,7 @@ body:not(.has-bg) #wrap { justify-content: center; padding-top: 96px; }
 
 #kicker { font-size: 25px; font-weight: 700; letter-spacing: .18em; color: var(--accent); margin-bottom: 20px; }
 
-#title { font-weight: 800; font-size: calc(var(--title) * var(--title-scale)); line-height: 1.22; letter-spacing: -.03em; }
+#title { font-family: var(--title-font, var(--sans)); font-weight: var(--title-weight, 800); font-size: calc(var(--title) * var(--title-scale)); line-height: 1.22; letter-spacing: -.03em; }
 
 #body { margin-top: 28px; font-size: 38px; line-height: 1.618; color: rgba(244, 242, 236, .76); max-width: 16em; }
 

@@ -1,1 +1,22 @@
-{"name": "신문 헤드라인체", "desc": "무채색 + 굵은 명조 + 가는 괘선. 시사·정책 자료에 맞다", "order": 1, "image": "전면 배경"}
+{
+  "name": "신문 헤드라인체",
+  "desc": "무채색 + 굵은 명조 + 가는 괘선. 시사·정책 자료에 맞다",
+  "order": 1,
+  "image": "전면 배경",
+  "fonts": [
+    {
+      "id": "myeongjo",
+      "name": "나눔명조",
+      "title": "\"Nanum Myeongjo\", \"Apple SD Gothic Neo\", Batang, serif",
+      "weight": 800,
+      "scale": 0.96
+    },
+    {
+      "id": "sans",
+      "name": "Pretendard",
+      "title": "Pretendard, \"Apple SD Gothic Neo\", \"Malgun Gothic\", sans-serif",
+      "weight": 800,
+      "scale": 1
+    }
+  ]
+}

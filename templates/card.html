@@ -87,8 +87,15 @@ async function render(d) {
   document.body.classList.toggle("has-bg", hasBg);
 
   // 제목 길이로 크기 결정. 실측 축소 루프는 넣지 않는다 — 프롬프트가 20자로 제한한다.
+  // 폰트 조합 (템플릿이 meta.json에 선언한 검증된 것만 넘어온다)
+  const root = document.documentElement;
+  for (const [k, v] of Object.entries(d.fontVars || {})) root.style.setProperty(k, v);
+
   const n = (d.title || "").length;
-  document.documentElement.style.setProperty("--title-scale", n > 22 ? 0.62 : n > 14 ? 0.8 : 1);
+  const lengthScale = n > 22 ? 0.62 : n > 14 ? 0.8 : 1;
+  // 서체마다 같은 크기에서 보이는 덩치가 다르다. 조합이 준 보정을 곱한다.
+  const fontScale = Number(d.fontVars?.["--font-scale"] ?? 1) || 1;
+  root.style.setProperty("--title-scale", lengthScale * fontScale);
   document.documentElement.style.setProperty("--lines", lines.length || 1);
 
   await loadImage(hasBg ? d.image : null);

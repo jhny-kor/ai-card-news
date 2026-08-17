@@ -1,1 +1,22 @@
-{ "name": "상하 분할", "desc": "위 절반이 사진, 아래가 글. 사진이 있는 자료에 가장 안정적이다", "image": "상단 46%", "order": 6 }
+{
+  "name": "상하 분할",
+  "desc": "위 절반이 사진, 아래가 글. 사진이 있는 자료에 가장 안정적이다",
+  "image": "상단 46%",
+  "order": 6,
+  "fonts": [
+    {
+      "id": "sans",
+      "name": "Pretendard",
+      "title": "Pretendard, \"Apple SD Gothic Neo\", \"Malgun Gothic\", sans-serif",
+      "weight": 800,
+      "scale": 1
+    },
+    {
+      "id": "myeongjo",
+      "name": "나눔명조",
+      "title": "\"Nanum Myeongjo\", \"Apple SD Gothic Neo\", Batang, serif",
+      "weight": 800,
+      "scale": 0.96
+    }
+  ]
+}

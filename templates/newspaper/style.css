@@ -27,8 +27,8 @@ body.has-bg #wrap { --ink: #fff; }
 }
 
 #title {
-  font-family: var(--serif);
-  font-weight: 800;
+  font-family: var(--title-font, var(--serif));
+  font-weight: var(--title-weight, 800);
   font-size: calc(var(--title) * var(--title-scale));
   line-height: 1.24;
   letter-spacing: -0.015em;
@@ -79,7 +79,7 @@ body.layout-number #body { font-size: 44px; color: var(--ink); }
 body.layout-quote #title { font-size: 30px; font-family: var(--sans); font-weight: 700; color: var(--dim); order: 2; margin-top: 34px; }
 body.layout-quote #wrap { justify-content: center; }
 body.layout-quote #body {
-  font-family: var(--serif); font-size: 62px; line-height: 1.45; color: var(--ink);
+  font-family: var(--title-font, var(--serif)); font-size: 62px; line-height: 1.45; color: var(--ink);
   margin-top: 0; text-indent: -0.5em;
 }
 body.layout-quote #body::before { content: "“"; }

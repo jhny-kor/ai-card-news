@@ -28,7 +28,8 @@ body:not(.has-bg) #scrim { background: none; }
 }
 
 #title {
-  font-weight: 800;
+  font-family: var(--title-font, var(--sans));
+  font-weight: var(--title-weight, 800);
   font-size: calc(var(--title) * var(--title-scale));
   line-height: 1.18;
   letter-spacing: -0.035em;

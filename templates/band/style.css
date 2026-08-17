@@ -23,7 +23,7 @@ body:not(.has-bg) #bg { display: none; }
 
 #kicker { font-size: 23px; font-weight: 700; letter-spacing: .2em; color: var(--accent); margin-bottom: 18px; }
 
-#title { font-weight: 800; font-size: calc(var(--title) * var(--title-scale)); line-height: 1.26; letter-spacing: -.025em; }
+#title { font-family: var(--title-font, var(--sans)); font-weight: var(--title-weight, 800); font-size: calc(var(--title) * var(--title-scale)); line-height: 1.26; letter-spacing: -.025em; }
 
 #body { margin-top: 26px; font-size: 34px; line-height: 1.618; color: var(--dim); }
 

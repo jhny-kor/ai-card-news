@@ -1,1 +1,22 @@
-{ "name": "좌우 분할", "desc": "왼쪽 띠가 사진, 오른쪽이 글. 세로로 긴 사진에 맞다", "image": "좌측 38%", "order": 8 }
+{
+  "name": "좌우 분할",
+  "desc": "왼쪽 띠가 사진, 오른쪽이 글. 세로로 긴 사진에 맞다",
+  "image": "좌측 38%",
+  "order": 8,
+  "fonts": [
+    {
+      "id": "sans",
+      "name": "Pretendard",
+      "title": "Pretendard, \"Apple SD Gothic Neo\", \"Malgun Gothic\", sans-serif",
+      "weight": 800,
+      "scale": 1
+    },
+    {
+      "id": "myeongjo",
+      "name": "나눔명조",
+      "title": "\"Nanum Myeongjo\", \"Apple SD Gothic Neo\", Batang, serif",
+      "weight": 800,
+      "scale": 0.96
+    }
+  ]
+}

@@ -43,6 +43,22 @@ app.whenReady().then(async () => {
     console.log(`  ${t}: ${files.length}장, 평균 ${Math.round(files.reduce((a, f) => a + fs.statSync(f).size, 0) / files.length / 1024)}KB`);
   }
 
+  // 폰트 조합을 바꾸면 결과가 실제로 달라져야 한다 (선택이 먹히는지)
+  const { listTemplates: lt } = await import("../src/lib/templates.js");
+  const metas = await lt();
+  for (const m of metas) {
+    const opts = m.fonts || [];
+    if (opts.length < 2) continue;
+    const dirs = [];
+    for (const f of opts.slice(0, 2)) {
+      const d = path.join(OUT, "_font", `${m.id}-${f.id}`);
+      await renderCards([CARDS[0]], { template: m.id, outDir: d, font: f.id });
+      dirs.push(fs.readFileSync(path.join(d, "card_01.png")));
+    }
+    if (dirs[0].equals(dirs[1])) { console.error(`${m.id}: 폰트를 바꿔도 결과가 같다`); bad++; }
+  }
+  console.log(`  폰트 전환: 조합 2개 이상인 템플릿 ${metas.filter((m) => (m.fonts || []).length > 1).length}개 확인`);
+
   const thumbs = await previewTemplates(CARDS[0], templates);
   for (const t of templates) {
     if (!String(thumbs[t] || "").startsWith("data:image/png;base64,")) { console.error(`${t}: 썸네일 실패`); bad++; }

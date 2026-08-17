@@ -1,8 +1,9 @@
 const $ = (id) => document.getElementById(id);
 const FIELDS = ["baseUrl", "apiKey", "model", "imageModel", "cards", "flow", "tone", "outDir",
-                "generateImages", "maxGenerate"];
+                "generateImages", "maxGenerate", "font"];
 let files = [];
 let lastOut = "";
+let templates = [];
 
 const val = (el) => (el.type === "checkbox" ? el.checked : el.value);
 const setVal = (el, v) => { if (el.type === "checkbox") el.checked = Boolean(v); else el.value = v ?? ""; };
@@ -33,7 +34,7 @@ async function init() {
   if (s.model) fill($("model"), [s.model], s.model);
   if (s.imageModel) fill($("imageModel"), [s.imageModel], s.imageModel);
 
-  const templates = await window.api.listTemplates();
+  templates = await window.api.listTemplates();
   $("gallery").innerHTML = templates.map((t) => `
     <label data-id="${t.id}" class="${t.id === s.template ? "sel" : ""}">
       <input type="radio" name="tpl" value="${t.id}" ${t.id === s.template ? "checked" : ""}>
@@ -44,13 +45,16 @@ async function init() {
   $("gallery").addEventListener("change", () => {
     document.querySelectorAll("#gallery label").forEach((l) =>
       l.classList.toggle("sel", l.querySelector("input").checked));
+    syncFonts();
     save();
+    redraw();
   });
+  $("font").addEventListener("change", () => { save(); redraw(); });
+  syncFonts(s.font);
 
   // 샘플 질감을 얹어 미리보기 — 템플릿마다 이미지가 어디에 들어가는지 바로 보인다.
   // 실행 후에는 사용자의 1번 카드 문안으로 다시 그린다 (PLAN.md 3.5)
-  drawThumbs({ layout: "cover", title: "여기에 제목이 들어갑니다", body: "카드뉴스 표지 미리보기", sample: true },
-             templates.map((t) => t.id));
+  redraw();
 
   window.api.onLog(log);
   for (const f of FIELDS) $(f).addEventListener("change", save);
@@ -59,13 +63,27 @@ async function init() {
 
 async function drawThumbs(card, ids) {
   try {
-    const shots = await window.api.preview(card, ids);
+    const shots = await window.api.preview(card, ids, $("font").value);
     for (const [id, uri] of Object.entries(shots)) {
       const img = $(`thumb-${id}`);
       if (img) img.src = uri;
     }
   } catch (e) { log(`미리보기 실패: ${e.message}`); }
 }
+
+/** 고른 템플릿이 제공하는 조합만 채운다. 자유 선택을 두면 레이아웃이 깨진다 (lib/fonts.js) */
+function syncFonts(keep) {
+  const id = document.querySelector("#gallery input:checked")?.value;
+  const opts = templates.find((t) => t.id === id)?.fonts || [];
+  const want = keep ?? $("font").value;
+  $("font").innerHTML = opts.map((f) => `<option value="${f.id}">${f.name}</option>`).join("");
+  if (opts.some((f) => f.id === want)) $("font").value = want;
+  $("fontNote").textContent = opts.length > 1
+    ? `이 템플릿에 어울리는 ${opts.length}가지` : "이 템플릿은 조합이 하나입니다";
+}
+
+let previewCard = { layout: "cover", title: "여기에 제목이 들어갑니다", body: "카드뉴스 표지 미리보기", sample: true };
+const redraw = () => drawThumbs(previewCard, templates.map((t) => t.id));
 
 const save = () => window.api.setSettings(cfg());
 
@@ -118,8 +136,8 @@ $("go").onclick = async () => {
   if (r.ok) {
     lastOut = r.outDir;
     $("openOut").disabled = false;
-    const ids = [...document.querySelectorAll("#gallery input")].map((i) => i.value);
-    drawThumbs({ ...r.cards[0], layout: "cover", sample: true }, ids);   // 갤러리를 내 카드 문안으로 갱신
+    previewCard = { ...r.cards[0], layout: "cover", sample: true };     // 갤러리를 내 카드 문안으로 갱신
+    redraw();
   } else {
     log(`실패: ${r.error}`);
   }

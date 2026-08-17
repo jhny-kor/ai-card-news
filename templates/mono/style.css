@@ -19,7 +19,8 @@ body.has-bg #scrim { background: color-mix(in srgb, var(--bg) 62%, transparent);
 #kicker { font-size: 28px; font-weight: 700; letter-spacing: .18em; color: var(--accent); margin-bottom: 26px; }
 
 #title {
-  font-weight: 800;
+  font-family: var(--title-font, var(--sans));
+  font-weight: var(--title-weight, 800);
   font-size: calc(var(--title) * var(--title-scale));
   line-height: 1.16;
   letter-spacing: -0.035em;

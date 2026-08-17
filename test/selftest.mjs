@@ -8,6 +8,8 @@ import { lint, repairPrompt } from "../src/lib/lint.js";
 import { parseCards, endpoint, buildPrompt } from "../src/lib/llm.js";
 import { readSource, filterImages } from "../src/lib/parse.js";
 import { attachImages } from "../src/lib/images.js";
+import { resolveFont, fontOptions, fontVars, DEFAULT_FONT } from "../src/lib/fonts.js";
+import { listTemplates } from "../src/lib/templates.js";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ids = (issues) => new Set(issues.map((i) => i.id));
@@ -203,6 +205,42 @@ await test("생성 첫 실패에서 멈춘다 (과금·시간 낭비 방지)", a
   });
   assert.equal(called, 1, `첫 실패 후에도 ${called}번 호출됐다`);
   assert.equal(r.generated, 0);
+});
+
+// --------------------------------------------------------------- 폰트 조합
+
+await test("고른 조합을 해석하고, 없는 id는 첫 번째로 떨어진다", () => {
+  const t = { fonts: [{ id: "myeongjo", name: "나눔명조", title: "M", weight: 800, scale: 0.96 },
+                      { id: "sans", name: "Pretendard", title: "S" }] };
+  assert.equal(resolveFont(t, "sans").title, "S");
+  assert.equal(resolveFont(t, "hand").id, "myeongjo", "없는 조합은 기본값으로");
+  assert.equal(resolveFont(t).id, "myeongjo");
+});
+
+await test("조합을 선언하지 않은 템플릿도 하나는 준다", () => {
+  assert.deepEqual(fontOptions({}), [DEFAULT_FONT]);
+  assert.deepEqual(fontOptions(null), [DEFAULT_FONT]);
+  assert.equal(resolveFont(undefined, "sans").id, "sans");
+});
+
+await test("CSS 변수를 만든다", () => {
+  const v = fontVars({ id: "x", title: "M", weight: 700, scale: 0.9 });
+  assert.deepEqual(v, { "--title-font": "M", "--title-weight": "700", "--font-scale": "0.9" });
+  assert.equal(fontVars(null)["--font-scale"], "1");
+});
+
+await test("모든 템플릿이 유효한 조합을 선언한다", async () => {
+  const templates = await listTemplates();
+  assert.ok(templates.length >= 8, `템플릿 ${templates.length}개`);
+  for (const t of templates) {
+    const opts = fontOptions(t);
+    assert.ok(opts.length >= 1, `${t.id}: 조합 없음`);
+    for (const f of opts) {
+      assert.ok(f.id && f.name && f.title, `${t.id}/${f.id}: 필드 누락`);
+      assert.ok(!f.scale || (f.scale > 0.5 && f.scale < 2), `${t.id}/${f.id}: scale ${f.scale} 이상`);
+    }
+    assert.equal(new Set(opts.map((f) => f.id)).size, opts.length, `${t.id}: id 중복`);
+  }
 });
 
 console.log(`\n${n}개 통과`);

@@ -20,6 +20,7 @@ const DEFAULTS = {
   flow: "list",
   tone: "",
   template: "newspaper",
+  font: "",
   generateImages: false,
   maxGenerate: 3,
   outDir: "",
@@ -83,7 +84,7 @@ async function run({ files, cfg }, log) {
 
   log("이미지 렌더링 중…");
   const outDir = cfg.outDir || path.join(app.getPath("documents"), "카드뉴스");
-  const out = await renderCards(cards, { template: cfg.template, outDir });
+  const out = await renderCards(cards, { template: cfg.template, outDir, font: cfg.font });
   log(`완료 — ${outDir}`);
   return { files: out, cards: cards.map(({ image, ...c }) => c), outDir };
 }
@@ -127,7 +128,7 @@ app.whenReady().then(() => {
   ipcMain.handle("models:list", (_e, cfg) => llm.listModels(cfg));
   ipcMain.handle("imageModels:list", (_e, cfg) => llm.listImageModels(cfg));
   ipcMain.handle("imageConfig", (_e, cfg) => llm.imageConfig(cfg));
-  ipcMain.handle("preview", (_e, card, templates) => previewTemplates(card, templates));
+  ipcMain.handle("preview", (_e, card, templates, font) => previewTemplates(card, templates, font));
   ipcMain.handle("open", (_e, p) => shell.openPath(p));
 
   ipcMain.handle("run", async (_e, payload) => {

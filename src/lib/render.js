@@ -3,25 +3,10 @@ import { BrowserWindow, nativeImage } from "electron";
 import path from "node:path";
 import fs from "node:fs/promises";
 import { fileURLToPath } from "node:url";
+import { resolveFont, fontVars } from "./fonts.js";
+import { listTemplates, TEMPLATES } from "./templates.js";
 
-const TEMPLATES = fileURLToPath(new URL("../../templates/", import.meta.url));
 const SIZE = 1080;   // 인스타그램 정사각 규격. 캡처는 디스플레이 배율을 타므로 항상 이 크기로 맞춘다.
-
-export function templateDir(name) {
-  return path.join(TEMPLATES, name);
-}
-
-export async function listTemplates() {
-  const dirs = (await fs.readdir(TEMPLATES, { withFileTypes: true })).filter((d) => d.isDirectory());
-  const out = [];
-  for (const d of dirs) {
-    try {
-      const meta = JSON.parse(await fs.readFile(path.join(TEMPLATES, d.name, "meta.json"), "utf8"));
-      out.push({ id: d.name, ...meta });
-    } catch { /* meta.json 없는 폴더는 템플릿이 아니다 */ }
-  }
-  return out.sort((a, b) => (a.order ?? 99) - (b.order ?? 99));
-}
 
 // 렌더 창은 하나를 재사용한다. 매번 만들고 부수면 다음 loadFile이 ERR_ABORTED로 죽는다.
 let renderWin = null;
@@ -58,8 +43,10 @@ async function sampleImage() {
 }
 
 /** cards[i].image 는 {ext,data} 또는 없음. 반환: 저장된 파일 경로 배열 */
-export async function renderCards(cards, { template, outDir }) {
+export async function renderCards(cards, { template, outDir, font }) {
   const cssUrl = "file://" + path.join(TEMPLATES, template, "style.css");
+  const meta = (await listTemplates()).find((t) => t.id === template);
+  const vars = fontVars(resolveFont(meta, font));
   await fs.mkdir(outDir, { recursive: true });
 
   return withWindow(async (win) => {
@@ -71,6 +58,7 @@ export async function renderCards(cards, { template, outDir }) {
         css: cssUrl,
         page: i + 1,
         total: cards.length,
+        fontVars: vars,
         image: card.image ? dataUri(card.image) : null,
       };
       delete payload.image_hint;
@@ -108,8 +96,9 @@ async function paint(win, payload, prev, { strict = true } = {}) {
 }
 
 /** 템플릿 갤러리용 썸네일 — 사용자의 실제 1번 카드를 각 템플릿으로 그린다 (PLAN.md 3.5) */
-export async function previewTemplates(card, templates) {
+export async function previewTemplates(card, templates, font) {
   const img = card.image || (card.sample ? await sampleImage() : null);
+  const metas = await listTemplates();
   return withWindow(async (win) => {
     const out = {};
     let prev = null;
@@ -117,6 +106,7 @@ export async function previewTemplates(card, templates) {
       const payload = {
         ...card, css: "file://" + path.join(TEMPLATES, t, "style.css"),
         page: 1, total: 1, image: img ? dataUri(img) : null,
+        fontVars: fontVars(resolveFont(metas.find((m) => m.id === t), font)),
       };
       delete payload.image_hint;
       prev = await paint(win, payload, prev, { strict: false });
@@ -125,3 +115,5 @@ export async function previewTemplates(card, templates) {
     return out;
   });
 }
+
+export { listTemplates };

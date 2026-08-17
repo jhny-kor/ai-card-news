@@ -11,7 +11,7 @@ contextBridge.exposeInMainWorld("api", {
   listModels: (cfg) => call("models:list", cfg),
   listImageModels: (cfg) => call("imageModels:list", cfg),
   imageConfig: (cfg) => call("imageConfig", cfg),
-  preview: (card, templates) => call("preview", card, templates),
+  preview: (card, templates, font) => call("preview", card, templates, font),
   run: (payload) => call("run", payload),
   open: (p) => call("open", p),
   onLog: (fn) => ipcRenderer.on("log", (_e, msg) => fn(msg)),

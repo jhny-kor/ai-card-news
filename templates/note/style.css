@@ -39,14 +39,14 @@ body.has-bg #body { color: #e6e8ea; }
 #wrap { padding: 96px 84px 88px 190px; justify-content: center; }
 
 #kicker {
-  font-family: var(--hand);
+  font-family: var(--title-font, var(--hand));
   font-size: 30px; font-weight: 400; letter-spacing: .1em; color: var(--margin);
   margin-bottom: 20px;
 }
 
 #title {
-  font-family: var(--hand);
-  font-weight: 400;
+  font-family: var(--title-font, var(--hand));
+  font-weight: var(--title-weight, 400);
   font-size: calc(var(--title) * var(--title-scale));
   line-height: 1.28;
   letter-spacing: -0.02em;

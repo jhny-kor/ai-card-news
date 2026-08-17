@@ -1,1 +1,29 @@
-{ "name": "사진 카드", "desc": "종이 위에 사진을 붙인 인화물. 사진이 여백 안쪽에 들어간다", "image": "상단 사각형", "order": 7 }
+{
+  "name": "사진 카드",
+  "desc": "종이 위에 사진을 붙인 인화물. 사진이 여백 안쪽에 들어간다",
+  "image": "상단 사각형",
+  "order": 7,
+  "fonts": [
+    {
+      "id": "myeongjo",
+      "name": "나눔명조",
+      "title": "\"Nanum Myeongjo\", \"Apple SD Gothic Neo\", Batang, serif",
+      "weight": 800,
+      "scale": 0.96
+    },
+    {
+      "id": "sans",
+      "name": "Pretendard",
+      "title": "Pretendard, \"Apple SD Gothic Neo\", \"Malgun Gothic\", sans-serif",
+      "weight": 800,
+      "scale": 1
+    },
+    {
+      "id": "hand",
+      "name": "나눔손글씨 펜",
+      "title": "\"Nanum Pen\", Pretendard, sans-serif",
+      "weight": 400,
+      "scale": 1.18
+    }
+  ]
+}
