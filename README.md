@@ -58,6 +58,12 @@
 전부 [kill-ai-slop](https://github.com/yetone/kill-ai-slop)의 시각 tell 목록을 피해서 만들었다 —
 인디고→바이올렛 그라데이션, 글로우, 글래스모피즘, 과대 그림자, 이모지, 아이콘 타일 없음.
 
+### 폰트
+
+Pretendard · 나눔명조 · 나눔손글씨 펜을 앱에 넣어 배포한다. **전부 SIL Open Font License 1.1**이라
+상업 판매 소프트웨어에 번들해도 된다. 시스템 폰트에 기대면 "기본값 느낌"이 나고 맥/윈도우 결과가 갈리는데,
+폐쇄망이라 실행 시 웹폰트를 받을 수도 없다. 자세한 건 [fonts/README.md](fonts/README.md).
+
 ---
 
 ## 폐쇄망 반입 절차

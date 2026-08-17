@@ -14,6 +14,7 @@
   --lh: 78px;                       /* 괘선 간격 = 본문 행간과 맞춘다 */
   --title: 92px;
   --sans: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "맑은 고딕", sans-serif;
+  --hand: "Nanum Pen", Pretendard, sans-serif;   /* 손글씨는 제목에만. 본문에 쓰면 안 읽힌다 */
 }
 
 body {
@@ -38,12 +39,14 @@ body.has-bg #body { color: #e6e8ea; }
 #wrap { padding: 96px 84px 88px 190px; justify-content: center; }
 
 #kicker {
-  font-size: 26px; font-weight: 700; letter-spacing: .1em; color: var(--margin);
+  font-family: var(--hand);
+  font-size: 30px; font-weight: 400; letter-spacing: .1em; color: var(--margin);
   margin-bottom: 20px;
 }
 
 #title {
-  font-weight: 800;
+  font-family: var(--hand);
+  font-weight: 400;
   font-size: calc(var(--title) * var(--title-scale));
   line-height: 1.28;
   letter-spacing: -0.02em;
@@ -86,7 +89,8 @@ body.layout-number { --title: 230px; }
 body.layout-number #title { color: var(--accent); letter-spacing: -0.04em; }
 body.layout-number #body { font-size: 44px; color: var(--ink); }
 
-body.layout-quote #title { font-size: 28px; font-weight: 700; color: var(--margin); order: 2; margin-top: 34px; }
+body.layout-quote #title { font-family: var(--sans); font-size: 30px; font-weight: 600;
+                           color: var(--dim); order: 2; margin-top: 34px; }
 body.layout-quote #body {
   font-size: 58px; font-weight: 700; line-height: 1.42; margin-top: 0;
   color: var(--ink); max-width: none; text-indent: -0.45em;

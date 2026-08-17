@@ -2,6 +2,18 @@
 <meta charset="utf-8">
 <title>card</title>
 <!-- 모든 템플릿이 공유하는 골격. 스타일은 template.css가 주입된다. PLAN.md 3.2 -->
+<style>
+  /* 번들 폰트 — 전부 SIL Open Font License 1.1. 상업 배포 소프트웨어 번들 허용.
+     시스템 폰트에 기대면 "기본값 느낌"이 나고 맥/윈도우 결과가 달라진다. fonts/README.md 참고 */
+  @font-face { font-family: "Pretendard"; font-weight: 100 900; font-display: block;
+               src: url("../fonts/PretendardVariable.woff2") format("woff2-variations"); }
+  @font-face { font-family: "Nanum Myeongjo"; font-weight: 400; font-display: block;
+               src: url("../fonts/NanumMyeongjo-Regular.woff2") format("woff2"); }
+  @font-face { font-family: "Nanum Myeongjo"; font-weight: 700 900; font-display: block;
+               src: url("../fonts/NanumMyeongjo-ExtraBold.woff2") format("woff2"); }
+  @font-face { font-family: "Nanum Pen"; font-weight: 400; font-display: block;
+               src: url("../fonts/NanumPenScript-Regular.woff2") format("woff2"); }
+</style>
 <link id="tpl" rel="stylesheet" href="">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }

@@ -2,8 +2,15 @@
 <meta charset="utf-8">
 <!-- 이 화면은 외부 리소스를 전혀 쓰지 않는다. 폐쇄망 배포이므로 명시적으로 잠근다. -->
 <meta http-equiv="Content-Security-Policy"
-      content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'">
+      content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'none'">
 <title>카드뉴스 생성기</title>
+<style>
+  /* 번들 폰트 — 전부 SIL Open Font License 1.1. 상업 배포 소프트웨어 번들 허용.
+     시스템 폰트에 기대면 "기본값 느낌"이 나고 맥/윈도우 결과가 달라진다. fonts/README.md 참고 */
+  @font-face { font-family: "Pretendard"; font-weight: 100 900; font-display: block;
+               src: url("../../fonts/PretendardVariable.woff2") format("woff2-variations"); }
+</style>
+
 <style>
   :root {
     --bg: #ffffff; --fg: #1c1f24; --dim: #6b7280; --line: #e2e5ea;
