@@ -1,0 +1,89 @@
+/* 신문 헤드라인체 — 무채색, 굵은 명조, 가는 괘선.
+   kill-ai-slop 금지 목록 회피: 그라데이션·글로우·유리효과·라운드·이모지 없음. */
+
+:root {
+  --ink: #16181d;
+  --paper: #f4f2ed;
+  --rule: #16181d;
+  --dim: #5c6068;
+  --title: 96px;
+  --serif: "Nanum Myeongjo", "Apple SD Gothic Neo", Batang, "바탕", serif;
+  --sans: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "맑은 고딕", sans-serif;
+}
+
+body { background: var(--paper); color: var(--ink); font-family: var(--sans); }
+#scrim { background: none; }
+body.has-bg #bg { filter: grayscale(1) contrast(1.05) brightness(0.42); }
+body.has-bg #scrim { background: rgba(22, 24, 29, 0.28); }
+body.has-bg { color: #fff; }
+body.has-bg #wrap { --ink: #fff; }
+
+#wrap { padding: 88px 84px 76px; justify-content: center; }
+
+#kicker {
+  font-size: 26px; letter-spacing: .22em; font-weight: 700;
+  padding-bottom: 18px; margin-bottom: 30px;
+  border-bottom: 1px solid currentColor;
+}
+
+#title {
+  font-family: var(--serif);
+  font-weight: 800;
+  font-size: calc(var(--title) * var(--title-scale));
+  line-height: 1.24;
+  letter-spacing: -0.015em;
+}
+
+#body {
+  margin-top: 34px; font-size: 40px; line-height: 1.618;   /* 조사 결과: 행간 = 글자크기 × 1.618 */
+  color: var(--dim); font-weight: 400;
+}
+body.has-bg #body { color: #e6e6e6; }
+
+#items { margin-top: 36px; list-style: none; counter-reset: n; }
+#items li {
+  counter-increment: n; font-size: 40px; line-height: 1.5;
+  padding: 20px 0 20px 74px; position: relative;
+  border-top: 1px solid rgba(22, 24, 29, .18);
+}
+#items li::before {
+  content: counter(n, decimal-leading-zero);
+  position: absolute; left: 0; top: 20px;
+  font-family: var(--serif); font-weight: 800; color: var(--ink);
+}
+
+#rows { margin-top: 36px; }
+#rows div {
+  font-size: 42px; line-height: 1.45; padding: 26px 0;
+  border-top: 2px solid var(--rule);
+}
+#rows div:last-child { border-bottom: 2px solid var(--rule); }
+
+#page {
+  position: absolute; left: 84px; right: 84px; bottom: 56px;
+  padding-top: 18px; border-top: 1px solid currentColor;
+  font-size: 24px; letter-spacing: .12em; color: var(--dim);
+}
+body.has-bg #page { color: #cfcfcf; }
+
+/* --- 레이아웃별 --- */
+body.layout-cover { --title: 128px; }
+body.layout-cover #wrap { justify-content: flex-end; padding-bottom: 110px; }
+body.layout-cover #title { letter-spacing: -0.03em; }
+
+body.layout-number { --title: 240px; }
+body.layout-number #wrap { justify-content: center; }
+body.layout-number #title { font-family: var(--sans); font-weight: 800; letter-spacing: -0.04em; }
+body.layout-number #body { font-size: 44px; color: var(--ink); }
+
+body.layout-quote #title { font-size: 30px; font-family: var(--sans); font-weight: 700; color: var(--dim); order: 2; margin-top: 34px; }
+body.layout-quote #wrap { justify-content: center; }
+body.layout-quote #body {
+  font-family: var(--serif); font-size: 62px; line-height: 1.45; color: var(--ink);
+  margin-top: 0; text-indent: -0.5em;
+}
+body.layout-quote #body::before { content: "“"; }
+body.layout-quote #body::after { content: "”"; }
+
+body.layout-closing #wrap { justify-content: flex-end; padding-bottom: 120px; }
+body.layout-closing #title { font-size: calc(72px * var(--title-scale)); }

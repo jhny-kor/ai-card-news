@@ -1,0 +1,77 @@
+/* 단색 초대형 고딕 — 배경 한 색, 글자가 화면을 꽉 채운다.
+   그라데이션 금지(kill-ai-slop #01·#06). 단색만 쓴다. */
+
+:root {
+  --bg: #1b3a2f;
+  --fg: #f2f0e9;
+  --accent: #d9c26a;
+  --title: 108px;
+  --sans: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "맑은 고딕", sans-serif;
+}
+
+body { background: var(--bg); color: var(--fg); font-family: var(--sans); }
+#scrim { background: none; }
+body.has-bg #bg { filter: grayscale(.7) contrast(1.1) brightness(0.4) sepia(.15); }
+body.has-bg #scrim { background: color-mix(in srgb, var(--bg) 62%, transparent); }
+
+#wrap { padding: 96px 88px 88px; justify-content: center; }
+
+#kicker { font-size: 28px; font-weight: 700; letter-spacing: .18em; color: var(--accent); margin-bottom: 26px; }
+
+#title {
+  font-weight: 800;
+  font-size: calc(var(--title) * var(--title-scale));
+  line-height: 1.16;
+  letter-spacing: -0.035em;
+}
+
+#body {
+  margin-top: 40px; font-size: 42px; line-height: 1.618; font-weight: 400;
+  color: color-mix(in srgb, var(--fg) 78%, var(--bg));
+  max-width: 15em;
+}
+
+#items { margin-top: 40px; list-style: none; counter-reset: n; }
+#items li {
+  counter-increment: n; font-size: 44px; line-height: 1.4; font-weight: 600;
+  padding: 18px 0 18px 78px; position: relative;
+}
+#items li::before {
+  content: counter(n); position: absolute; left: 0; top: 18px;
+  font-weight: 800; color: var(--accent);
+}
+
+#rows { margin-top: 40px; display: grid; gap: 18px; }
+#rows div {
+  font-size: 44px; font-weight: 600; line-height: 1.35;
+  padding: 30px 34px; background: color-mix(in srgb, var(--fg) 10%, transparent);
+  border-left: 8px solid var(--accent);
+}
+#rows div:nth-child(2) { border-left-color: color-mix(in srgb, var(--fg) 35%, transparent); }
+
+#page {
+  position: absolute; right: 88px; bottom: 72px;
+  font-size: 26px; letter-spacing: .1em;
+  color: color-mix(in srgb, var(--fg) 55%, var(--bg));
+}
+
+/* --- 레이아웃별 --- */
+body.layout-cover { --title: 150px; }
+body.layout-cover #wrap { justify-content: center; }
+body.layout-cover #body { margin-top: 46px; font-size: 46px; }
+
+body.layout-number { --title: 280px; }
+body.layout-number #title { color: var(--accent); letter-spacing: -0.05em; }
+body.layout-number #body { font-size: 48px; color: var(--fg); }
+
+body.layout-quote #wrap { justify-content: center; }
+body.layout-quote #title { font-size: 30px; font-weight: 600; color: var(--accent); order: 2; margin-top: 40px; }
+body.layout-quote #body {
+  font-size: 66px; font-weight: 700; line-height: 1.35; margin-top: 0;
+  color: var(--fg); max-width: none; text-indent: -0.45em;
+}
+body.layout-quote #body::before { content: "“"; }
+body.layout-quote #body::after { content: "”"; }
+
+body.layout-closing #title { font-size: calc(80px * var(--title-scale)); }
+body.layout-closing #wrap { justify-content: flex-end; padding-bottom: 130px; }

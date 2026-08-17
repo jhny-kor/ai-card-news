@@ -1,0 +1,67 @@
+{
+  "_source": "im-not-ai (MIT), yoonmoon (MIT), kill-ai-slop (Apache-2.0) 의 규칙 중 단문(카드뉴스)에 유효한 것만 추림. PLAN.md 2.3",
+  "_scope": "title=제목만, body=본문만, any=둘 다",
+  "_severity": "S1=1회라도 위반, S2=덱 전체에서 limit 초과 시 위반",
+
+  "phrase": [
+    { "id": "C-8", "severity": "S1", "scope": "any", "pattern": "[가이]\\s*아니라",
+      "msg": "대구법 'A가 아니라 B'. 카드뉴스 AI 문안의 최다 패턴이다. 직접 단언으로 바꿔라" },
+    { "id": "D-7", "severity": "S1", "scope": "title", "pattern": "에서\\s*\\S{1,12}(으)?로\\s*$",
+      "msg": "변환 공식 'X에서 Y로'. 구체 서술로 바꿔라" },
+    { "id": "D-6", "severity": "S1", "scope": "any", "pattern": "(할|볼|들을|바꿀|시작할)?\\s*(때입니다|때이다|순간입니다|시점입니다)",
+      "msg": "결말 공식 '~할 때입니다'. 구체 동사 단언으로 바꿔라" },
+    { "id": "D-1", "severity": "S1", "scope": "any", "pattern": "결론적으로|정리하자면|요약하자면|종합하면|한마디로 말해",
+      "msg": "결산 도입구. 삭제하고 바로 본론을 써라" },
+    { "id": "D-4", "severity": "S1", "scope": "any", "pattern": "혁신적|획기적|압도적|파격적|폭발적|전례 ?없는|놀라운|강력한|필수적",
+      "msg": "hype 어휘. 자료의 구체 수치나 사실로 바꿔라" },
+    { "id": "D-2", "severity": "S1", "scope": "any", "pattern": "주목할 ?만|시사하는 ?바|매우 중요합니다",
+      "msg": "의의 과장. 삭제하거나 구체 결론으로 바꿔라" },
+    { "id": "D-5", "severity": "S2", "scope": "any", "limit": 0, "pattern": "(시대|기술|시장|세상)[이가]\\s*\\S*(묻|부른|요구한|말한)",
+      "msg": "의인화 추상 주어. 사람이나 기관을 주어로 바꿔라" },
+
+    { "id": "C-11", "severity": "S1", "scope": "any",
+      "pattern": "[가-힣](며|지만|면서|아서|어서|라서),|(하|되|있|없|만들|넣|받|주|보|가|오|알|살|먹|찾|쓰|늘|줄|맞|같|많|좋|이루|시키)고,|(그리고|하지만|또한|따라서|그러나|그런데),",
+      "_note": "-고 는 어간 목록으로 제한한다. '창고, 사무실' 같은 명사를 오탐하지 않기 위해서다",
+      "msg": "연결어미 뒤 쉼표. 한국어 AI 판별에서 가장 강한 단일 신호다. 쉼표를 지워라" },
+    { "id": "C-5", "severity": "S1", "scope": "any", "pattern": "\\p{Extended_Pictographic}", "flags": "u",
+      "msg": "이모지. 카드 이미지에는 넣지 않는다" },
+    { "id": "C-9", "severity": "S1", "scope": "any", "pattern": "^\\s*\\d+\\)",
+      "msg": "숫자 괄호 인덱싱. 레이아웃 list를 쓰거나 본문에 녹여라" },
+
+    { "id": "A-8", "severity": "S1", "scope": "any", "pattern": "되어지|보여지|생각되어|지게 ?된다",
+      "msg": "이중 피동. 능동이나 단일 피동으로 바꿔라" },
+    { "id": "A-9", "severity": "S1", "scope": "any", "pattern": "에 ?의해",
+      "msg": "'~에 의해' 피동. 행위자를 주어로 세워라" },
+    { "id": "A-7", "severity": "S2", "scope": "any", "limit": 0, "pattern": "가지고 ?있|을 가진다|를 가진다",
+      "msg": "have 직역. 형용사·동사로 환원해라 (경쟁력을 가지고 있다 → 경쟁력이 강하다)" },
+    { "id": "A-1", "severity": "S2", "scope": "any", "limit": 1, "pattern": "에 ?대(해|한|하여)",
+      "msg": "'~에 대해' 남발. 목적격 조사로 직결해라" },
+
+    { "id": "G-1", "severity": "S2", "scope": "any", "limit": 1, "pattern": "로 ?보입니다|로 ?보인다|인 ?듯합니다|로 ?판단됩니다|것으로 ?보",
+      "msg": "추측 종결 남발. 단언할 수 있는 곳은 단언해라" },
+    { "id": "A-10", "severity": "S2", "scope": "any", "limit": 1, "pattern": "할 ?수 ?있습니다|할 ?수 ?있다",
+      "msg": "'~할 수 있다' 남발. 단언으로 바꿔라" },
+    { "id": "I-4", "severity": "S2", "scope": "any", "limit": 1, "pattern": "해야 ?합니다|해야 ?한다|할 ?필요가 ?있",
+      "msg": "권고형 결말 남발. 구체 동사 단언이나 조건문으로 변주해라" },
+    { "id": "I-1", "severity": "S2", "scope": "any", "limit": 2, "pattern": "것입니다|것이다",
+      "msg": "형식명사 '것이다' 남발. '~다'로 직접 종결해라" },
+
+    { "id": "J-2", "severity": "S2", "scope": "any", "limit": 2, "pattern": "['\"“”'']",
+      "msg": "따옴표 강조 과다. 진짜 인용만 남겨라" },
+    { "id": "J-3", "severity": "S2", "scope": "any", "limit": 1, "pattern": "—|–",
+      "msg": "대시 부가설명 반복. 쉼표나 별도 문장으로 분해해라" }
+  ],
+
+  "uniformity": {
+    "minLengthCV": 0.15,
+    "_minLengthCV": "본문 길이 변동계수. XDAC(ACL 2025) 기준 AI 단문은 길이가 균일하다. 금칙어로는 안 잡히는 최강 신호",
+    "maxSameEnding": 3,
+    "_maxSameEnding": "같은 종결어미가 연속으로 몇 장까지 허용되는지",
+    "endingChars": 3
+  },
+
+  "limits": {
+    "titleMax": 20,
+    "bodyMax": 80
+  }
+}

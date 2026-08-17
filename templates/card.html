@@ -1,0 +1,71 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>card</title>
+<!-- 모든 템플릿이 공유하는 골격. 스타일은 template.css가 주입된다. PLAN.md 3.2 -->
+<link id="tpl" rel="stylesheet" href="">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1080px; height: 1080px; overflow: hidden; }
+  body { position: relative; word-break: keep-all; }
+  #bg { position: absolute; inset: 0; background-size: cover; background-position: center; }
+  #scrim { position: absolute; inset: 0; }
+  #wrap { position: relative; height: 100%; display: flex; flex-direction: column; }
+  #items > div, #rows > div { display: block; }
+  .hide { display: none !important; }
+</style>
+
+<div id="bg"></div><div id="scrim"></div>
+<div id="wrap">
+  <div id="kicker"></div>
+  <h1 id="title"></h1>
+  <p id="body"></p>
+  <ol id="items"></ol>
+  <div id="rows"></div>
+  <div id="page"></div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+
+function render(d) {
+  document.body.className = `layout-${d.layout || "statement"}`;
+  $("tpl").href = d.css || "";
+
+  $("title").textContent = d.title || "";
+  $("kicker").textContent = d.kicker || "";
+  $("page").textContent = d.total > 1 ? `${d.page} / ${d.total}` : "";
+
+  const lines = String(d.body || "").split("\n").map((s) => s.trim()).filter(Boolean);
+  const isList = d.layout === "list";
+  const isCompare = d.layout === "compare";
+
+  $("body").textContent = isList || isCompare ? "" : (d.body || "");
+  $("items").innerHTML = isList ? lines.map((t) => `<li>${esc(t)}</li>`).join("") : "";
+  $("rows").innerHTML = isCompare ? lines.map((t) => `<div>${esc(t)}</div>`).join("") : "";
+
+  $("body").classList.toggle("hide", isList || isCompare || !d.body);
+  $("items").classList.toggle("hide", !isList);
+  $("rows").classList.toggle("hide", !isCompare);
+  $("kicker").classList.toggle("hide", !d.kicker);
+  $("page").classList.toggle("hide", !(d.total > 1) || d.layout === "cover");
+
+  // 배경 이미지: 추출본이든 생성본이든 같은 필터를 먹여 한 벌처럼 보이게 한다 (PLAN.md 4.2)
+  const hasBg = Boolean(d.image);
+  $("bg").style.backgroundImage = hasBg ? `url("${d.image}")` : "";
+  document.body.classList.toggle("has-bg", hasBg);
+
+  // 제목 길이로 크기 결정. 실측 축소 루프는 넣지 않는다 — 프롬프트가 20자로 제한한다.
+  const n = (d.title || "").length;
+  document.documentElement.style.setProperty("--title-scale", n > 22 ? 0.62 : n > 14 ? 0.8 : 1);
+  document.documentElement.style.setProperty("--lines", lines.length || 1);
+}
+
+function esc(s) {
+  return s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+}
+
+/** 렌더 완료 신호 — main이 이걸 기다린 뒤 캡처한다 */
+function settled() {
+  return new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(true))));
+}
+</script>

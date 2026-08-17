@@ -1,0 +1,43 @@
+appId: kr.local.cardnews
+productName: CardNews
+copyright: ""
+
+directories:
+  output: dist
+  buildResources: build
+
+files:
+  - src/**/*
+  - templates/**/*
+  - fonts/**/*
+  - package.json
+  - "!**/*.map"
+
+# mupdf는 WASM을 파일로 읽는다. asar 안에 있으면 로드에 실패할 수 있어 풀어둔다.
+asar: true
+asarUnpack:
+  - "**/node_modules/mupdf/**"
+
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  artifactName: cardnews-setup-${version}.exe
+  # 서명 안 함. 반입 후 SmartScreen 경고가 뜬다 (README 참고)
+  signAndEditExecutable: false
+
+nsis:
+  oneClick: false
+  perMachine: false                  # 관리자 권한 없이 설치 — 폐쇄망 PC에서 중요
+  allowToChangeInstallationDirectory: true
+  allowElevation: false
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: 카드뉴스 생성기
+  deleteAppDataOnUninstall: false
+  runAfterFinish: false
+
+mac:
+  target: [dmg]
+  category: public.app-category.productivity
+  artifactName: cardnews-${version}.dmg

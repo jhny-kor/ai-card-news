@@ -1,0 +1,24 @@
+{
+  "name": "cardnews",
+  "version": "0.1.0",
+  "description": "로컬 LLM 기반 카드뉴스 생성기",
+  "author": "cardnews",
+  "main": "src/main.js",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "selftest": "node test/selftest.mjs",
+    "build:win": "electron-builder --win --x64 --publish never",
+    "build:mac": "electron-builder --mac --publish never"
+  },
+  "dependencies": {
+    "cfb": "^1.2.2",
+    "fflate": "^0.8.2",
+    "mupdf": "^1.28.0"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8"
+  }
+}

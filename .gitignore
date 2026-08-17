@@ -1,0 +1,6 @@
+node_modules/
+dist/
+반입/
+test/out/
+.omc/
+.DS_Store
