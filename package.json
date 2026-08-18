@@ -10,7 +10,8 @@
     "start": "electron .",
     "selftest": "node test/selftest.mjs",
     "build:win": "electron-builder --win --x64 --publish never",
-    "build:mac": "electron-builder --mac --publish never"
+    "build:mac": "electron-builder --mac --publish never",
+    "check:ps1": "pwsh -NoProfile -File scripts/check-ps1.ps1"
   },
   "dependencies": {
     "cfb": "^1.2.2",

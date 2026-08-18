@@ -108,6 +108,15 @@ npm·Electron 바이너리 다운로드·electron-builder 리소스가 한 번�
 | `EPERM: operation not permitted, rmdir` | 탐색기에서 폴더를 닫고 백신 실시간 검사를 잠시 끈 뒤 재실행 |
 | 다 실패 | `-Insecure` (TLS 검증 해제, **최후의 수단**) |
 
+인증서 준비만 따로 하려면:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File fix-cert.ps1
+```
+
+**같은 창에서** 이어서 `npm install` 을 실행해야 한다(환경변수가 그 창에만 걸린다).
+새 창에서도 쓰려면 `-Persist` 를 붙인다.
+
 ### 2) 폐쇄망 PC에서 설치
 
 무결성부터 확인한다:
@@ -168,7 +177,12 @@ npm run selftest                       # 린터·파서 (네트워크 불필요)
 npx electron test/render-test.mjs      # 렌더 8종 × 7장 — test/out/ 에 나온다
 npx electron test/ui-test.mjs          # UI 스모크
 npx electron test/shot.mjs             # README용 화면 캡처 갱신
+npm run check:ps1                      # .ps1 문법 + BOM 검사 (pwsh 필요)
 ```
+
+윈도우 스크립트는 맥에서 고치기 쉬워서 `check:ps1` 로 문법을 확인하고 올린다.
+**`.ps1` 은 반드시 UTF-8 BOM으로 저장한다** — Windows PowerShell 5.1은 BOM이 없으면
+시스템 ANSI(한글 윈도우는 cp949)로 읽어서 한글이 깨진다. 검사기가 이것도 같이 본다.
 
 ### 템플릿 추가
 
