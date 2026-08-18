@@ -92,6 +92,22 @@ powershell -ExecutionPolicy Bypass -File build-win.ps1
 
 스크립트는 빌드 전에 자체 점검을 돌리고, 실패하면 빌드하지 않는다.
 
+#### 사내망에서 `self-signed certificate in certificate chain` 이 날 때
+
+사내 프록시가 TLS를 가로채면 Node가 인증서 체인을 믿지 못한다. 브라우저는 되는데 npm만 안 되는 게 그 신호다.
+**스크립트가 알아서 처리한다** — 윈도우 신뢰 저장소에서 루트 인증서를 뽑아
+`NODE_EXTRA_CA_CERTS`로 넘긴다. 검증을 끄는 게 아니라 신뢰 목록을 넘겨주는 것이라 보안이 내려가지 않고,
+npm·Electron 바이너리 다운로드·electron-builder 리소스가 한 번에 해결된다.
+
+그래도 막히면 순서대로:
+
+| 증상 | 대응 |
+|---|---|
+| 여전히 인증서 오류 | 전산팀에서 사내 루트 인증서를 받아 `$env:NODE_EXTRA_CA_CERTS='C:\경로\corp-root.pem'` 지정 후 재실행 |
+| GitHub 접속 자체가 차단 | `electron-v33.4.11-win32-x64.zip` 과 `SHASUMS256.txt-33.4.11` 을 수동으로 받아 `%LOCALAPPDATA%\electron\Cache\` 에 넣기 |
+| `EPERM: operation not permitted, rmdir` | 탐색기에서 폴더를 닫고 백신 실시간 검사를 잠시 끈 뒤 재실행 |
+| 다 실패 | `-Insecure` (TLS 검증 해제, **최후의 수단**) |
+
 ### 2) 폐쇄망 PC에서 설치
 
 무결성부터 확인한다:
