@@ -84,10 +84,24 @@ await test("제목 없는 항목은 버린다", () => {
   assert.equal(parseCards('[{"title":"가"},{"body":"제목없음"}]').length, 1);
 });
 
-await test("엔드포인트 정규화", () => {
-  assert.equal(endpoint("http://localhost:3000", "/api/chat/completions"), "http://localhost:3000/api/chat/completions");
-  assert.equal(endpoint("http://localhost:3000/api/", "/api/chat/completions"), "http://localhost:3000/api/chat/completions");
-  assert.equal(endpoint("http://x:3000", "/api/v1/images/generations"), "http://x:3000/api/v1/images/generations");
+await test("주소를 어떤 형태로 넣어도 같은 곳을 가리킨다", () => {
+  // Open WebUI 화면에 표시되는 API 주소를 그대로 붙여넣는 사용자가 많다.
+  // 예전에는 .../api/v1 에 경로를 또 붙여 .../api/v1/api/models 가 만들어졌고,
+  // 서버가 웹페이지를 200으로 돌려줘서 "Unexpected token '<'" 로 죽었다.
+  const same = ["https://ai.example.kr", "https://ai.example.kr/", "https://ai.example.kr/api",
+                "https://ai.example.kr/api/v1", "https://ai.example.kr/api/v1/", " https://ai.example.kr/v1 "];
+  for (const base of same) {
+    assert.equal(endpoint(base, "/api/models"), "https://ai.example.kr/api/models", `실패: ${base}`);
+    assert.equal(endpoint(base, "/api/chat/completions"), "https://ai.example.kr/api/chat/completions", `실패: ${base}`);
+    assert.equal(endpoint(base, "/api/v1/images/generations"),
+                 "https://ai.example.kr/api/v1/images/generations", `실패: ${base}`);
+  }
+});
+
+await test("하위 경로 배포와 캐시 URL도 처리한다", () => {
+  assert.equal(endpoint("https://x.kr/openwebui/api/v1", "/api/models"), "https://x.kr/openwebui/api/models");
+  assert.equal(endpoint("http://10.0.0.5:3000", "/cache/image/generations/a.png"),
+               "http://10.0.0.5:3000/cache/image/generations/a.png");
 });
 
 await test("프롬프트에 금칙 규칙과 layout enum이 들어간다", () => {

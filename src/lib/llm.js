@@ -54,15 +54,24 @@ export function parseCards(reply) {
 
 // --------------------------------------------------------------- HTTP
 
+/**
+ * 사용자가 넣는 주소는 제각각이다 — 서버 루트만 넣기도 하고,
+ * Open WebUI 화면에 표시되는 API 주소(.../api/v1)를 그대로 붙여넣기도 한다.
+ * 무엇을 넣든 서버 루트로 되돌린 뒤 정해진 경로를 붙인다.
+ * (이걸 안 하면 .../api/v1/api/models 같은 주소가 만들어져 HTML이 돌아온다)
+ */
 export function endpoint(baseUrl, path) {
-  let base = String(baseUrl || "").replace(/\/+$/, "");
-  if (path.startsWith("/api")) return base.replace(/\/api$/, "") + path;
-  if (!/\/(api|v1)$/.test(base)) base += "/api";        // 주소만 붙여넣는 경우가 흔하다
+  const base = String(baseUrl || "").trim()
+    .replace(/\/+$/, "")
+    .replace(/\/api\/v1$/, "")
+    .replace(/\/api$/, "")
+    .replace(/\/v1$/, "");
   return base + path;
 }
 
 async function req(cfg, path, { method = "GET", body, raw = false } = {}) {
-  const res = await fetch(endpoint(cfg.baseUrl, path), {
+  const url = endpoint(cfg.baseUrl, path);
+  const res = await fetch(url, {
     method,
     headers: {
       Authorization: `Bearer ${cfg.apiKey}`,
@@ -73,12 +82,21 @@ async function req(cfg, path, { method = "GET", body, raw = false } = {}) {
   if (!res.ok) {
     const detail = (await res.text()).slice(0, 300);
     if (res.status === 401) throw new Error("API 키가 틀렸습니다 (401)");
+    if (res.status === 404) throw new Error(`그런 주소가 없습니다 (404): ${url}\n서버 주소를 확인하세요`);
     if (res.status === 403 && path.includes("images"))
       throw new Error("이미지 생성 권한이 없습니다 (403). Open WebUI 관리자 설정에서 이미지 생성을 켜고 " +
                       "계정에 features.image_generation 권한을 주세요");
     throw new Error(`${res.status} ${detail}`);
   }
-  return raw ? Buffer.from(await res.arrayBuffer()) : res.json();
+  if (raw) return Buffer.from(await res.arrayBuffer());
+  // 주소가 어긋나면 Open WebUI가 오류 대신 웹페이지를 200으로 돌려준다.
+  // 그대로 JSON 파싱하면 "Unexpected token '<'" 이라는 엉뚱한 메시지가 나온다.
+  const type = res.headers.get("content-type") || "";
+  if (!type.includes("json")) {
+    throw new Error(`JSON 대신 ${type.split(";")[0] || "알 수 없는 형식"}이 왔습니다.\n` +
+                    `요청한 주소: ${url}\n서버 주소가 맞는지 확인하세요`);
+  }
+  return res.json();
 }
 
 export async function listModels(cfg) {
