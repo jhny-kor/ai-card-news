@@ -90,6 +90,7 @@ async function run({ files, cfg }, log) {
 
   const captions = await writeCaptions(cards, cfg, outDir, log);
 
+  lastRun = { cards, cfg, outDir };        // 이미지를 붙인 원본을 그대로 보관
   log(`완료 — ${outDir}`);
   return { files: out, cards: cards.map(({ image, ...c }) => c), outDir, captions };
 }
@@ -134,9 +135,37 @@ async function writeCaptions(cards, cfg, outDir, log) {
   return captions;
 }
 
+/**
+ * 고친 문안으로 다시 그린다. LLM을 부르지 않는다 — 이미지도 자료도 그대로 쓴다.
+ * 모델이 약해서 손을 볼 수밖에 없을 때, 전체를 재생성하지 않고 끝내는 길이다.
+ */
+async function rerender(edits, log) {
+  if (!lastRun) throw new Error("먼저 카드뉴스를 한 번 만들어야 합니다.");
+  const { cards, cfg, outDir } = lastRun;
+  if (edits.length !== cards.length)
+    throw new Error(`카드 수가 맞지 않습니다 (${edits.length} vs ${cards.length})`);
+
+  // 이미지는 유지하고 글과 레이아웃만 갈아끼운다
+  const merged = cards.map((c, i) => ({
+    ...c,
+    layout: edits[i].layout || c.layout,
+    title: edits[i].title ?? c.title,
+    body: edits[i].body ?? c.body,
+  }));
+
+  log("고친 문안으로 다시 그리는 중…");
+  const files = await renderCards(merged, { template: cfg.template, outDir, font: cfg.font });
+  lastRun.cards = merged;
+  log(`완료 — ${outDir}`);
+  return { files, outDir };
+}
+
 // --------------------------------------------------------------- 창 / IPC
 
 let mainWindow;
+
+/** 마지막 실행 결과. 문안만 고쳐 다시 그릴 때 이미지를 재사용한다. */
+let lastRun = null;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -176,6 +205,19 @@ app.whenReady().then(() => {
   ipcMain.handle("imageConfig", (_e, cfg) => llm.imageConfig(cfg));
   ipcMain.handle("preview", (_e, card, templates, font) => previewTemplates(card, templates, font));
   ipcMain.handle("open", (_e, p) => shell.openPath(p));
+  ipcMain.handle("lint", (_e, cards) => lint(cards));      // 정규식이라 즉시 끝난다
+
+  ipcMain.handle("rerender", async (_e, edits) => {
+    try { return { ok: true, ...(await rerender(edits, log)) }; }
+    catch (e) { return { ok: false, error: e.message }; }
+  });
+
+  ipcMain.handle("captions:save", async (_e, text) => {
+    if (!lastRun) return { ok: false, error: "먼저 카드뉴스를 만들어야 합니다." };
+    const file = path.join(lastRun.outDir, "게시문안.txt");
+    await fs.writeFile(file, text, "utf8");
+    return { ok: true, file };
+  });
 
   ipcMain.handle("run", async (_e, payload) => {
     try {

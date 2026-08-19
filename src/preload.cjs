@@ -14,6 +14,9 @@ contextBridge.exposeInMainWorld("api", {
   imageConfig: (cfg) => call("imageConfig", cfg),
   preview: (card, templates, font) => call("preview", card, templates, font),
   run: (payload) => call("run", payload),
+  rerender: (edits) => call("rerender", edits),
+  lint: (cards) => call("lint", cards),
+  saveCaptions: (text) => call("captions:save", text),
   open: (p) => call("open", p),
   onLog: (fn) => ipcRenderer.on("log", (_e, msg) => fn(msg)),
 });

@@ -3,6 +3,7 @@ import { app, BrowserWindow, ipcMain } from "electron";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import * as social from "../src/lib/social.js";
+import { lint } from "../src/lib/lint.js";
 import { listTemplates, previewTemplates, closeRenderWindow } from "../src/lib/render.js";
 
 const SRC = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "src");
@@ -14,6 +15,9 @@ app.whenReady().then(async () => {
   ipcMain.handle("settings:set", () => {});
   ipcMain.handle("templates:list", listTemplates);
   ipcMain.handle("platforms:list", () => social.PLATFORMS);
+  ipcMain.handle("lint", (_e, cards) => lint(cards));
+  ipcMain.handle("rerender", (_e, edits) => ({ ok: true, files: edits.map((_, i) => `card_${i}.png`), outDir: "/tmp" }));
+  ipcMain.handle("captions:save", () => ({ ok: true, file: "/tmp/게시문안.txt" }));
   ipcMain.handle("preview", (_e, card, t) => previewTemplates(card, t));
 
   const win = new BrowserWindow({
@@ -36,13 +40,45 @@ app.whenReady().then(async () => {
     await new Promise((r) => setTimeout(r, 500));
   }
 
+  // 카드 문안 편집기 — 고쳐서 다시 그리기가 이 앱의 보완 수단이다
+  const ed = await win.webContents.executeJavaScript(`(async () => {
+    const before = document.querySelector('#tabs button[data-p="cards"]').disabled;
+    showCards([
+      { layout: "cover", title: "혁신적인 제목", body: "지금이 준비할 때입니다." },
+      { layout: "statement", title: "멀쩡한 제목", body: "등기부등본 을구를 먼저 본다" },
+    ]);
+    showTab("cards");
+    const rows = document.querySelectorAll("#cardList .card").length;
+    document.querySelector('#cardList .card[data-i="1"] .title').value = "고친 제목";
+    const edits = collectEdits();
+    document.getElementById("recheck").click();
+    await new Promise(r => setTimeout(r, 400));
+    return { before, rows,
+      layouts: document.querySelectorAll("#cardList .layout option").length,
+      edited: edits[1].title,
+      enabled: !document.querySelector('#tabs button[data-p="cards"]').disabled,
+      shown: !document.getElementById("p-cards").hidden,
+      flagged: document.querySelectorAll("#cardList .body.bad").length,
+      why: document.querySelector('#cardList .card[data-i="0"] .why').textContent };
+  })()`);
+  if (ed.before !== true) errors.push("카드 탭이 처음부터 활성화돼 있다");
+  if (!ed.enabled) errors.push("실행 후에도 카드 탭이 잠겨 있다");
+  if (!ed.shown) errors.push("카드 패널이 안 보인다");
+  if (ed.rows !== 2) errors.push(`카드 행이 ${ed.rows}개다`);
+  if (ed.layouts !== 14) errors.push(`레이아웃 선택지가 카드당 7개가 아니다 (${ed.layouts})`);
+  if (ed.edited !== "고친 제목") errors.push("편집 내용이 수집되지 않는다");
+  if (ed.flagged < 1) errors.push("AI 티가 있는 카드에 표시가 안 된다");
+  if (!/D-4|D-6/.test(ed.why)) errors.push(`위반 사유가 안 붙는다: ${ed.why}`);
+  console.log(`  카드 편집기: ${ed.rows}행, 위반 표시 ${ed.flagged}건 (${ed.why.slice(0, 40)})`);
+
   // 게시 문안 패널 — X 가중치 계산과 탭 전환까지 확인한다
   const caps = await win.webContents.executeJavaScript(`(() => {
     showCaptions({
       x: { text: "가".repeat(150), tags: ["#전세사기"] },
       instagram: { text: "짧은 본문", tags: ["#가", "#나", "#다"] },
     });
-    const first = { shown: getComputedStyle(document.getElementById("caps")).display,
+    showTab("caps");
+    const first = { shown: document.getElementById("p-caps").hidden ? "none" : "block",
                     tabs: document.querySelectorAll("#capTabs button").length,
                     len: document.getElementById("capLen").textContent,
                     over: document.getElementById("capLen").className.includes("over"),

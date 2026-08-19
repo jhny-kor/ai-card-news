@@ -59,7 +59,6 @@
   #files { color: var(--dim); font-size: 12px; }
   #plats { display: flex; gap: 14px; flex-wrap: wrap; }
   #plats label { font-size: 13px; display: flex; gap: 5px; align-items: center; cursor: pointer; }
-  #caps { display: none; margin-top: 10px; }
   #capTabs { display: flex; gap: 6px; margin-bottom: 6px; flex-wrap: wrap; }
   #capTabs button { font-size: 12px; padding: 5px 11px; }
   #capTabs button.on { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 700; }
@@ -68,6 +67,18 @@
              font: 13px/1.6 inherit; color: var(--fg); }
   #capBar { display: flex; gap: 10px; align-items: center; margin-top: 6px; }
   #capLen.over { color: var(--warn); font-weight: 700; }
+  #tabs button { font-size: 12px; padding: 5px 12px; }
+  #tabs button.on { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 700; }
+  #cardList { max-height: 190px; overflow-y: auto; padding-right: 4px; }
+  .card { display: grid; grid-template-columns: 26px 104px 1fr; gap: 6px; align-items: start; margin-bottom: 6px; }
+  .card .no { color: var(--dim); font-size: 12px; padding-top: 8px; text-align: right; }
+  .card select { padding: 6px 7px; font-size: 12px; }
+  .card .fields { display: grid; gap: 4px; }
+  .card input, .card textarea { width: 100%; background: var(--field); border: 1px solid var(--line);
+    border-radius: 5px; padding: 6px 8px; font: 13px/1.5 inherit; color: var(--fg); }
+  .card textarea { resize: vertical; min-height: 34px; }
+  .card .bad { border-color: var(--warn); }
+  .card .why { font-size: 11px; color: var(--warn); }
 </style>
 
 <div id="top">
@@ -115,21 +126,38 @@
 </div>
 
 <div id="bottom">
-<h2>실행</h2>
-<div class="inline" style="margin-bottom:10px">
+<div class="inline" style="margin-bottom:8px">
   <button class="primary" id="go">카드뉴스 만들기</button>
   <button id="openOut" disabled>결과 폴더 열기</button>
+  <span style="flex:1"></span>
+  <span id="tabs">
+    <button data-p="log" class="on">로그</button>
+    <button data-p="cards" disabled>카드 문안</button>
+    <button data-p="caps" disabled>게시 문안</button>
+  </span>
 </div>
-<div id="caps">
+
+<div id="p-log"><div id="log"></div></div>
+
+<div id="p-cards" hidden>
+  <div id="cardList"></div>
+  <div class="inline" style="margin-top:8px">
+    <button class="primary" id="rerender">고쳐서 다시 그리기</button>
+    <button id="recheck">AI 티 검사</button>
+    <span class="note" id="editNote">LLM을 다시 부르지 않습니다. 이미지도 그대로 씁니다.</span>
+  </div>
+</div>
+
+<div id="p-caps" hidden>
   <div id="capTabs"></div>
-  <textarea id="capText" readonly></textarea>
+  <textarea id="capText"></textarea>
   <div id="capBar">
     <button id="capCopy">복사</button>
+    <button id="capSave">파일 저장</button>
     <span class="note" id="capLen"></span>
     <span class="note" id="capHint"></span>
   </div>
 </div>
-<div id="log"></div>
 </div>
 
 <script src="ui.js"></script>

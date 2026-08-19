@@ -7,6 +7,8 @@ let templates = [];
 let platforms = [];
 let captions = {};
 let capTab = "";
+let capEdits = {};        // 사용자가 고친 게시 문안(합쳐진 원문 그대로)
+const LAYOUTS = ["cover", "statement", "list", "quote", "number", "compare", "closing"];
 
 const val = (el) => (el.type === "checkbox" ? el.checked : el.value);
 const setVal = (el, v) => { if (el.type === "checkbox") el.checked = Boolean(v); else el.value = v ?? ""; };
@@ -107,8 +109,9 @@ function capLength(text, p) {
 
 function showCaptions(map) {
   captions = map || {};
+  capEdits = {};
   const ids = Object.keys(captions);
-  $("caps").style.display = ids.length ? "block" : "none";
+  document.querySelector('#tabs button[data-p="caps"]').disabled = !ids.length;
   if (!ids.length) return;
   if (!ids.includes(capTab)) capTab = ids[0];
   $("capTabs").innerHTML = ids.map((id) => {
@@ -123,7 +126,7 @@ function drawCaption() {
   const p = platforms.find((x) => x.id === capTab);
   if (!cap || !p) return;
   const tags = (cap.tags || []).join(" ");
-  const full = tags ? `${cap.text}\n\n${tags}` : cap.text;
+  const full = capEdits[capTab] ?? (tags ? `${cap.text}\n\n${tags}` : cap.text);
   $("capText").value = full;
   const len = capLength(full, p);
   $("capLen").textContent = `${len} / ${p.max}자` + (p.weighted ? " (한글 2자)" : "");
@@ -139,10 +142,96 @@ $("capTabs").addEventListener("click", (e) => {
   drawCaption();
 });
 
+$("capText").addEventListener("input", () => {
+  capEdits[capTab] = $("capText").value;      // 고친 내용을 플랫폼별로 들고 있는다
+  drawCaption();
+});
+
+$("capSave").onclick = async () => {
+  const body = Object.keys(captions).map((id) => {
+    const p = platforms.find((x) => x.id === id) || { name: id, max: 0 };
+    const cap = captions[id];
+    const tags = (cap.tags || []).join(" ");
+    const text = capEdits[id] ?? (tags ? `${cap.text}\n\n${tags}` : cap.text);
+    return `${"=".repeat(52)}\n${p.name}  (${capLength(text, p)}/${p.max}자)\n${"=".repeat(52)}\n${text}\n`;
+  }).join("\n");
+  const r = await window.api.saveCaptions(body);
+  log(r.ok ? `게시문안.txt 저장` : `저장 실패: ${r.error}`);
+};
+
 $("capCopy").onclick = async () => {
   await navigator.clipboard.writeText($("capText").value);
   $("capCopy").textContent = "복사됨";
   setTimeout(() => ($("capCopy").textContent = "복사"), 1200);
+};
+
+// ------------------------------------------------------------- 탭
+
+function showTab(name) {
+  for (const p of ["log", "cards", "caps"]) $("p-" + p).hidden = p !== name;
+  document.querySelectorAll("#tabs button").forEach((b) => b.classList.toggle("on", b.dataset.p === name));
+}
+$("tabs").addEventListener("click", (e) => {
+  const b = e.target.closest("button");
+  if (b && !b.disabled) showTab(b.dataset.p);
+});
+
+// ------------------------------------------------------------- 카드 문안 편집
+
+/** 모델이 약하면 결국 손을 봐야 한다. 여기서 고치면 LLM을 다시 부르지 않는다. */
+function showCards(cards) {
+  $("cardList").innerHTML = cards.map((c, i) => `
+    <div class="card" data-i="${i}">
+      <div class="no">${i + 1}</div>
+      <select class="layout">${LAYOUTS.map((l) =>
+        `<option value="${l}" ${l === c.layout ? "selected" : ""}>${l}</option>`).join("")}</select>
+      <div class="fields">
+        <input class="title" value="${esc(c.title || "")}">
+        <textarea class="body" rows="${((c.body || "").match(/\n/g) || []).length + 1}">${esc(c.body || "")}</textarea>
+        <div class="why"></div>
+      </div>
+    </div>`).join("");
+  document.querySelector('#tabs button[data-p="cards"]').disabled = false;
+}
+
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function collectEdits() {
+  return [...document.querySelectorAll("#cardList .card")].map((el) => ({
+    layout: el.querySelector(".layout").value,
+    title: el.querySelector(".title").value,
+    body: el.querySelector(".body").value,
+  }));
+}
+
+$("recheck").onclick = async () => {
+  const edits = collectEdits();
+  const issues = await window.api.lint(edits);
+  document.querySelectorAll("#cardList .card").forEach((el) => {
+    el.querySelector(".title").classList.remove("bad");
+    el.querySelector(".body").classList.remove("bad");
+    el.querySelector(".why").textContent = "";
+  });
+  for (const it of issues) {
+    const m = /(\d+)번 카드/.exec(it.where || "");
+    const el = m ? document.querySelector(`#cardList .card[data-i="${Number(m[1]) - 1}"]`) : null;
+    if (!el) continue;
+    el.querySelector(".body").classList.add("bad");
+    const why = el.querySelector(".why");
+    why.textContent = (why.textContent ? why.textContent + " / " : "") + `[${it.id}] ${it.msg.split(".")[0]}`;
+  }
+  const deck = issues.filter((i) => !/\d+번 카드/.test(i.where || ""));
+  $("editNote").textContent = issues.length
+    ? `${issues.length}건` + (deck.length ? ` — ${deck.map((d) => d.id).join(", ")}` : "")
+    : "AI 티 없음";
+};
+
+$("rerender").onclick = async () => {
+  $("rerender").disabled = true;
+  const r = await window.api.rerender(collectEdits());
+  log(r.ok ? `다시 그렸습니다 — ${r.files.length}장` : `다시 그리기 실패: ${r.error}`);
+  if (!r.ok) showTab("log");
+  $("rerender").disabled = false;
 };
 
 const save = () => window.api.setSettings(cfg());
@@ -198,7 +287,9 @@ $("go").onclick = async () => {
     $("openOut").disabled = false;
     previewCard = { ...r.cards[0], layout: "cover", sample: true };     // 갤러리를 내 카드 문안으로 갱신
     redraw();
+    showCards(r.cards);
     showCaptions(r.captions);
+    showTab("cards");        // 손볼 게 있으면 바로 보이도록
   } else {
     log(`실패: ${r.error}`);
   }
