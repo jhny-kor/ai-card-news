@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld("api", {
   getSettings: () => call("settings:get"),
   setSettings: (cfg) => call("settings:set", cfg),
   listTemplates: () => call("templates:list"),
+  listPlatforms: () => call("platforms:list"),
   pickFiles: () => call("files:pick"),
   pickDir: () => call("dir:pick"),
   listModels: (cfg) => call("models:list", cfg),

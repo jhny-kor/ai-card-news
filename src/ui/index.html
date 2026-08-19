@@ -57,6 +57,17 @@
          height: 158px; overflow: auto; white-space: pre-wrap; font-size: 12px;
          font-family: ui-monospace, "SF Mono", Consolas, monospace; }
   #files { color: var(--dim); font-size: 12px; }
+  #plats { display: flex; gap: 14px; flex-wrap: wrap; }
+  #plats label { font-size: 13px; display: flex; gap: 5px; align-items: center; cursor: pointer; }
+  #caps { display: none; margin-top: 10px; }
+  #capTabs { display: flex; gap: 6px; margin-bottom: 6px; flex-wrap: wrap; }
+  #capTabs button { font-size: 12px; padding: 5px 11px; }
+  #capTabs button.on { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 700; }
+  #capText { width: 100%; height: 132px; resize: vertical; background: var(--field);
+             border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px;
+             font: 13px/1.6 inherit; color: var(--fg); }
+  #capBar { display: flex; gap: 10px; align-items: center; margin-top: 6px; }
+  #capLen.over { color: var(--warn); font-weight: 700; }
 </style>
 
 <div id="top">
@@ -89,6 +100,10 @@
 <div class="row"><label>톤</label><input type="text" id="tone" placeholder="예: 친근하고 쉬운 말투"><span></span></div>
 <div class="row"><label>저장 위치</label><input type="text" id="outDir"><button id="pickDir">변경</button></div>
 
+<h2>게시 문안</h2>
+<div id="plats"></div>
+<div class="note" style="margin-top:6px">체크한 곳에 맞춰 본문과 해시태그를 따로 씁니다. 결과 폴더에 게시문안.txt로도 저장됩니다.</div>
+
 <h2>템플릿</h2>
 <div id="gallery"></div>
 <div class="inline" style="margin-top:10px">
@@ -104,6 +119,15 @@
 <div class="inline" style="margin-bottom:10px">
   <button class="primary" id="go">카드뉴스 만들기</button>
   <button id="openOut" disabled>결과 폴더 열기</button>
+</div>
+<div id="caps">
+  <div id="capTabs"></div>
+  <textarea id="capText" readonly></textarea>
+  <div id="capBar">
+    <button id="capCopy">복사</button>
+    <span class="note" id="capLen"></span>
+    <span class="note" id="capHint"></span>
+  </div>
 </div>
 <div id="log"></div>
 </div>

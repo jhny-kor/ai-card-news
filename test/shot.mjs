@@ -3,6 +3,7 @@ import { app, BrowserWindow, ipcMain, nativeTheme } from "electron";
 import path from "node:path";
 import fs from "node:fs/promises";
 import { fileURLToPath } from "node:url";
+import * as social from "../src/lib/social.js";
 import { listTemplates, previewTemplates, renderCards, closeRenderWindow } from "../src/lib/render.js";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -47,6 +48,7 @@ app.whenReady().then(async () => {
   ipcMain.handle("settings:get", () => SETTINGS);
   ipcMain.handle("settings:set", () => {});
   ipcMain.handle("templates:list", listTemplates);
+  ipcMain.handle("platforms:list", () => social.PLATFORMS);
   ipcMain.handle("preview", (_e, card, t) => previewTemplates(card, t));
 
   for (const theme of ["light", "dark"]) {

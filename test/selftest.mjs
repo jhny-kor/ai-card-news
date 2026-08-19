@@ -10,6 +10,7 @@ import { readSource, filterImages } from "../src/lib/parse.js";
 import { attachImages } from "../src/lib/images.js";
 import { resolveFont, fontOptions, fontVars, DEFAULT_FONT } from "../src/lib/fonts.js";
 import { listTemplates } from "../src/lib/templates.js";
+import * as social from "../src/lib/social.js";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ids = (issues) => new Set(issues.map((i) => i.id));
@@ -255,6 +256,59 @@ await test("모든 템플릿이 유효한 조합을 선언한다", async () => {
     }
     assert.equal(new Set(opts.map((f) => f.id)).size, opts.length, `${t.id}: id 중복`);
   }
+});
+
+// --------------------------------------------------------------- 게시 문안
+
+await test("X는 한글을 2자로 센다", () => {
+  assert.equal(social.weightedLength("hello"), 5);
+  assert.equal(social.weightedLength("가나다"), 6);
+  assert.equal(social.weightedLength("전세 사기"), 9);     // 한글4×2 + 공백1
+  // 같은 글이 X에서만 두 배로 계산된다 — 이걸 안 세면 항상 한도를 넘긴다
+  const text = "가".repeat(200);
+  assert.equal(social.lengthOf(text, social.platform("x")), 400);
+  assert.equal(social.lengthOf(text, social.platform("threads")), 200);
+});
+
+await test("본문과 해시태그를 붙여 최종 형태를 만든다", () => {
+  assert.equal(social.compose({ text: "본문", tags: ["#가", "나"] }), "본문\n\n#가 #나");
+  assert.equal(social.compose({ text: " 본문 ", tags: [] }), "본문");
+});
+
+await test("플랫폼 한도 초과를 잡는다", () => {
+  const long = { text: "가".repeat(200), tags: ["#가"] };
+  const ids = social.check({ x: long }).map((i) => i.msg);
+  assert.equal(ids.length, 1);
+  assert.match(ids[0], /한도 280자/);
+  assert.equal(social.check({ threads: long }).filter((i) => /한도 500자/.test(i.msg)).length, 0);
+});
+
+await test("플랫폼별 해시태그 개수를 잡는다", () => {
+  const five = { text: "본문", tags: ["#ㄱ", "#ㄴ", "#ㄷ", "#ㄹ", "#ㅁ"] };
+  assert.match(social.check({ threads: five })[0].msg, /한도 1개/);
+  assert.match(social.check({ x: five })[0].msg, /한도 3개/);
+  assert.deepEqual(social.check({ instagram: five }), []);            // 3~5개는 정상
+  assert.match(social.check({ instagram: { text: "본문", tags: [] } })[0].msg, /3개 이상/);
+});
+
+await test("인스타그램 본문 링크를 잡는다", () => {
+  const withLink = { text: "자세히는 https://example.kr 참고", tags: ["#ㄱ", "#ㄴ", "#ㄷ"] };
+  assert.match(social.check({ instagram: withLink })[0].msg, /프로필 링크/);
+  assert.deepEqual(social.check({ facebook: { ...withLink, tags: [] } }), []);
+});
+
+await test("응답을 파싱하고 요청하지 않은 플랫폼은 버린다", () => {
+  const reply = '<think>음</think>```json\n{"x":{"text":"본문","tags":["전세사기"]},"tiktok":{"text":"x"}}\n```';
+  const got = social.parse(reply, ["x", "instagram"]);
+  assert.deepEqual(Object.keys(got), ["x"]);
+  assert.deepEqual(got.x.tags, ["#전세사기"]);                        // # 없이 와도 붙인다
+});
+
+await test("프롬프트에 고른 플랫폼의 규칙만 들어간다", () => {
+  const p = social.buildPrompt([{ title: "제목", body: "본문" }], ["x"]);
+  assert.ok(p.includes("X —") && p.includes("280자"), "X 규칙이 없다");
+  assert.ok(!p.includes("인스타그램 —"), "고르지 않은 플랫폼이 들어갔다");
+  assert.ok(p.includes("이모지를 쓰지 마라"), "AI 티 규칙이 없다");
 });
 
 console.log(`\n${n}개 통과`);

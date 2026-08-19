@@ -4,6 +4,9 @@ const FIELDS = ["baseUrl", "apiKey", "model", "imageModel", "cards", "flow", "to
 let files = [];
 let lastOut = "";
 let templates = [];
+let platforms = [];
+let captions = {};
+let capTab = "";
 
 const val = (el) => (el.type === "checkbox" ? el.checked : el.value);
 const setVal = (el, v) => { if (el.type === "checkbox") el.checked = Boolean(v); else el.value = v ?? ""; };
@@ -14,6 +17,7 @@ function cfg() {
   o.cards = Number(o.cards) || 6;
   o.maxGenerate = Number(o.maxGenerate) || 3;
   o.template = document.querySelector("#gallery input:checked")?.value || "newspaper";
+  o.platforms = [...document.querySelectorAll("#plats input:checked")].map((i) => i.value);
   return o;
 }
 
@@ -33,6 +37,13 @@ async function init() {
   for (const f of FIELDS) setVal($(f), s[f]);
   if (s.model) fill($("model"), [s.model], s.model);
   if (s.imageModel) fill($("imageModel"), [s.imageModel], s.imageModel);
+
+  platforms = await window.api.listPlatforms();
+  const picked = new Set(s.platforms || ["instagram"]);
+  $("plats").innerHTML = platforms.map((p) => `
+    <label><input type="checkbox" value="${p.id}" ${picked.has(p.id) ? "checked" : ""}>
+    ${p.name} <span class="note">${p.max}자 · 태그 ${p.tags[0]}~${p.tags[1]}</span></label>`).join("");
+  $("plats").addEventListener("change", save);
 
   templates = await window.api.listTemplates();
   $("gallery").innerHTML = templates.map((t) => `
@@ -84,6 +95,55 @@ function syncFonts(keep) {
 
 let previewCard = { layout: "cover", title: "여기에 제목이 들어갑니다", body: "카드뉴스 표지 미리보기", sample: true };
 const redraw = () => drawThumbs(previewCard, templates.map((t) => t.id));
+
+/** X는 한글을 2자로 센다. 다른 곳은 글자 수 그대로. */
+function capLength(text, p) {
+  if (!p?.weighted) return [...text].length;
+  const cjk = /[ᄀ-ᇿ⺀-〾ぁ-㏿㐀-䶿一-鿿ꀀ-꓏ꥠ-꥿가-퟿豈-﫿︰-﹏＀-｠￠-￦]/;
+  let n = 0;
+  for (const ch of text) n += cjk.test(ch) ? 2 : 1;
+  return n;
+}
+
+function showCaptions(map) {
+  captions = map || {};
+  const ids = Object.keys(captions);
+  $("caps").style.display = ids.length ? "block" : "none";
+  if (!ids.length) return;
+  if (!ids.includes(capTab)) capTab = ids[0];
+  $("capTabs").innerHTML = ids.map((id) => {
+    const p = platforms.find((x) => x.id === id);
+    return `<button data-id="${id}" class="${id === capTab ? "on" : ""}">${p ? p.name : id}</button>`;
+  }).join("");
+  drawCaption();
+}
+
+function drawCaption() {
+  const cap = captions[capTab];
+  const p = platforms.find((x) => x.id === capTab);
+  if (!cap || !p) return;
+  const tags = (cap.tags || []).join(" ");
+  const full = tags ? `${cap.text}\n\n${tags}` : cap.text;
+  $("capText").value = full;
+  const len = capLength(full, p);
+  $("capLen").textContent = `${len} / ${p.max}자` + (p.weighted ? " (한글 2자)" : "");
+  $("capLen").className = "note" + (len > p.max ? " over" : "");
+  $("capHint").textContent = p.fold ? `첫 ${p.fold}자 뒤로는 접힙니다` : "";
+}
+
+$("capTabs").addEventListener("click", (e) => {
+  const id = e.target.closest("button")?.dataset.id;
+  if (!id) return;
+  capTab = id;
+  document.querySelectorAll("#capTabs button").forEach((b) => b.classList.toggle("on", b.dataset.id === id));
+  drawCaption();
+});
+
+$("capCopy").onclick = async () => {
+  await navigator.clipboard.writeText($("capText").value);
+  $("capCopy").textContent = "복사됨";
+  setTimeout(() => ($("capCopy").textContent = "복사"), 1200);
+};
 
 const save = () => window.api.setSettings(cfg());
 
@@ -138,6 +198,7 @@ $("go").onclick = async () => {
     $("openOut").disabled = false;
     previewCard = { ...r.cards[0], layout: "cover", sample: true };     // 갤러리를 내 카드 문안으로 갱신
     redraw();
+    showCaptions(r.captions);
   } else {
     log(`실패: ${r.error}`);
   }

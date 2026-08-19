@@ -6,6 +6,7 @@ import { collect } from "./lib/parse.js";
 import { lint, repairPrompt } from "./lib/lint.js";
 import * as llm from "./lib/llm.js";
 import { attachImages } from "./lib/images.js";
+import * as social from "./lib/social.js";
 import { renderCards, listTemplates, previewTemplates, closeRenderWindow } from "./lib/render.js";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -21,6 +22,7 @@ const DEFAULTS = {
   tone: "",
   template: "newspaper",
   font: "",
+  platforms: ["instagram"],
   generateImages: false,
   maxGenerate: 3,
   outDir: "",
@@ -85,8 +87,51 @@ async function run({ files, cfg }, log) {
   log("이미지 렌더링 중…");
   const outDir = cfg.outDir || path.join(app.getPath("documents"), "카드뉴스");
   const out = await renderCards(cards, { template: cfg.template, outDir, font: cfg.font });
+
+  const captions = await writeCaptions(cards, cfg, outDir, log);
+
   log(`완료 — ${outDir}`);
-  return { files: out, cards: cards.map(({ image, ...c }) => c), outDir };
+  return { files: out, cards: cards.map(({ image, ...c }) => c), outDir, captions };
+}
+
+/** 카드가 확정된 뒤에 부르는 별도 호출. 카드 생성 프롬프트에 끼워넣으면 둘 다 품질이 떨어진다. */
+async function writeCaptions(cards, cfg, outDir, log) {
+  const ids = (cfg.platforms || []).filter((id) => social.platform(id));
+  if (!ids.length) return {};
+
+  log(`게시 문안 작성 중… (${ids.map((i) => social.platform(i).name).join(", ")})`);
+  let captions;
+  try {
+    captions = social.parse(await llm.chat(cfg, social.buildPrompt(cards, ids, { tone: cfg.tone })), ids);
+  } catch (e) {
+    log(`  게시 문안 실패: ${e.message}`);
+    return {};
+  }
+
+  // 플랫폼 규칙 + 문장의 AI 티를 함께 본다
+  const rule = social.check(captions);
+  const slop = lint(Object.entries(captions).map(([id, c]) => ({ title: id, body: c.text })));
+  if (rule.length || slop.length) {
+    for (const it of rule) log(`  ${it.msg}`);
+    for (const it of slop.slice(0, 4)) log(`  [${it.id}] ${it.msg.split(".")[0]}`);
+    log("  고쳐서 다시 요청");
+    try {
+      const fix = `아래 게시글을 지적대로 고쳐라. 같은 형식의 JSON만 출력해라.\n\n` +
+        [...rule.map((i) => `- ${i.msg}`), ...slop.map((i) => `- ${i.where}: ${i.msg}`)].join("\n") +
+        `\n\n${JSON.stringify(captions, null, 1)}`;
+      const fixed = social.parse(await llm.chat(cfg, fix), ids);
+      if (Object.keys(fixed).length === Object.keys(captions).length) captions = fixed;
+      const left = social.check(captions);
+      log(left.length ? `  수정 후 ${left.length}건 남음` : "  규칙 통과");
+    } catch (e) {
+      log(`  수정 실패, 원본 유지: ${e.message}`);
+    }
+  } else {
+    log("  규칙 통과");
+  }
+
+  await fs.writeFile(path.join(outDir, "게시문안.txt"), social.toFile(captions), "utf8");
+  return captions;
 }
 
 // --------------------------------------------------------------- 창 / IPC
@@ -110,6 +155,7 @@ app.whenReady().then(() => {
   ipcMain.handle("settings:get", loadSettings);
   ipcMain.handle("settings:set", (_e, cfg) => saveSettings(cfg));
   ipcMain.handle("templates:list", listTemplates);
+  ipcMain.handle("platforms:list", () => social.PLATFORMS);
 
   ipcMain.handle("files:pick", async () => {
     const r = await dialog.showOpenDialog(mainWindow, {

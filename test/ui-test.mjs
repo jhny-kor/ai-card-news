@@ -2,6 +2,7 @@
 import { app, BrowserWindow, ipcMain } from "electron";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import * as social from "../src/lib/social.js";
 import { listTemplates, previewTemplates, closeRenderWindow } from "../src/lib/render.js";
 
 const SRC = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "src");
@@ -12,6 +13,7 @@ app.whenReady().then(async () => {
     cards: 6, flow: "list", tone: "", outDir: "/tmp", generateImages: false, maxGenerate: 3, template: "newspaper" }));
   ipcMain.handle("settings:set", () => {});
   ipcMain.handle("templates:list", listTemplates);
+  ipcMain.handle("platforms:list", () => social.PLATFORMS);
   ipcMain.handle("preview", (_e, card, t) => previewTemplates(card, t));
 
   const win = new BrowserWindow({
@@ -34,19 +36,46 @@ app.whenReady().then(async () => {
     await new Promise((r) => setTimeout(r, 500));
   }
 
+  // 게시 문안 패널 — X 가중치 계산과 탭 전환까지 확인한다
+  const caps = await win.webContents.executeJavaScript(`(() => {
+    showCaptions({
+      x: { text: "가".repeat(150), tags: ["#전세사기"] },
+      instagram: { text: "짧은 본문", tags: ["#가", "#나", "#다"] },
+    });
+    const first = { shown: getComputedStyle(document.getElementById("caps")).display,
+                    tabs: document.querySelectorAll("#capTabs button").length,
+                    len: document.getElementById("capLen").textContent,
+                    over: document.getElementById("capLen").className.includes("over"),
+                    text: document.getElementById("capText").value };
+    document.querySelectorAll("#capTabs button")[1].click();
+    return { ...first, second: document.getElementById("capLen").textContent,
+             hint: document.getElementById("capHint").textContent };
+  })()`);
+  if (caps.shown !== "block") errors.push("게시 문안 패널이 안 보인다");
+  if (caps.tabs !== 2) errors.push(`탭이 ${caps.tabs}개다`);
+  // 한글 150자×2 + 줄바꿈 2 + "#전세사기"(1+4×2) = 311
+  if (!caps.len.startsWith("311 / 280자")) errors.push(`X 길이 계산이 이상하다: ${caps.len} (311이어야 한다)`);
+  if (!caps.over) errors.push("한도 초과인데 경고 표시가 없다");
+  if (!caps.text.includes("#전세사기")) errors.push("해시태그가 본문에 안 붙었다");
+  if (!/\/ 2200자/.test(caps.second)) errors.push(`탭 전환이 안 된다: ${caps.second}`);
+  if (!caps.hint.includes("125")) errors.push("인스타그램 접힘 안내가 없다");
+  console.log(`  게시 문안: 탭 ${caps.tabs}개, X ${caps.len}${caps.over ? " (초과 경고)" : ""}`);
+
   const state = await win.webContents.executeJavaScript(`(() => ({
     api: typeof window.api,
     templates: document.querySelectorAll('#gallery label').length,
     thumbs: [...document.querySelectorAll('#gallery img')].filter(i => i.src.startsWith('data:')).length,
-    fields: ['baseUrl','apiKey','model','cards','flow','outDir','generateImages','maxGenerate']
+    fields: ['baseUrl','apiKey','model','cards','flow','outDir','generateImages','maxGenerate','font']
               .filter(id => !document.getElementById(id)),
     log: document.getElementById('log').textContent.trim(),
+    plats: document.querySelectorAll('#plats input').length,
   }))()`);
 
   if (state.api !== "object") errors.push("preload가 window.api를 노출하지 못했다");
   if (!state.templates) errors.push("템플릿 갤러리가 비었다");
   if (state.thumbs !== state.templates) errors.push(`썸네일 ${state.thumbs}/${state.templates}만 그려졌다`);
   if (state.fields.length) errors.push(`ui.js가 찾는 요소가 없다: ${state.fields.join(", ")}`);
+  if (state.plats !== 4) errors.push(`플랫폼 체크박스가 ${state.plats}개다 (4개여야 한다)`);
 
   console.log(`  템플릿 ${state.templates}개, 썸네일 ${state.thumbs}개`);
   console.log(`  로그: ${state.log}`);
