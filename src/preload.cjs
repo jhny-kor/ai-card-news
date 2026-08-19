@@ -16,6 +16,7 @@ contextBridge.exposeInMainWorld("api", {
   run: (payload) => call("run", payload),
   rerender: (edits) => call("rerender", edits),
   lint: (cards) => call("lint", cards),
+  autofix: (cards) => call("autofix", cards),
   saveCaptions: (text) => call("captions:save", text),
   open: (p) => call("open", p),
   onLog: (fn) => ipcRenderer.on("log", (_e, msg) => fn(msg)),

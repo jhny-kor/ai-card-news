@@ -3,7 +3,8 @@ import { app, BrowserWindow, ipcMain } from "electron";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import * as social from "../src/lib/social.js";
-import { lint } from "../src/lib/lint.js";
+import { lint, autofix } from "../src/lib/lint.js";
+import { checkNumbers } from "../src/lib/facts.js";
 import { listTemplates, previewTemplates, closeRenderWindow } from "../src/lib/render.js";
 
 const SRC = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "src");
@@ -15,7 +16,8 @@ app.whenReady().then(async () => {
   ipcMain.handle("settings:set", () => {});
   ipcMain.handle("templates:list", listTemplates);
   ipcMain.handle("platforms:list", () => social.PLATFORMS);
-  ipcMain.handle("lint", (_e, cards) => lint(cards));
+  ipcMain.handle("lint", (_e, cards) => [...lint(cards), ...checkNumbers(cards, "자료에는 700원만 있다")]);
+  ipcMain.handle("autofix", (_e, cards) => autofix(cards));
   ipcMain.handle("rerender", (_e, edits) => ({ ok: true, files: edits.map((_, i) => `card_${i}.png`), outDir: "/tmp" }));
   ipcMain.handle("captions:save", () => ({ ok: true, file: "/tmp/게시문안.txt" }));
   ipcMain.handle("preview", (_e, card, t) => previewTemplates(card, t));
@@ -44,8 +46,8 @@ app.whenReady().then(async () => {
   const ed = await win.webContents.executeJavaScript(`(async () => {
     const before = document.querySelector('#tabs button[data-p="cards"]').disabled;
     showCards([
-      { layout: "cover", title: "혁신적인 제목", body: "지금이 준비할 때입니다." },
-      { layout: "statement", title: "멀쩡한 제목", body: "등기부등본 을구를 먼저 본다" },
+      { layout: "cover", title: "혁신적인 제목 🔥", body: "지금이 준비할 때입니다." },
+      { layout: "statement", title: "멀쩡한 제목", body: "10만 명이 700원으로 확인했다" },
     ]);
     showTab("cards");
     const rows = document.querySelectorAll("#cardList .card").length;
@@ -53,13 +55,17 @@ app.whenReady().then(async () => {
     const edits = collectEdits();
     document.getElementById("recheck").click();
     await new Promise(r => setTimeout(r, 400));
+    const fact = document.querySelector('#cardList .card[data-i="1"] .why').textContent;
+    document.getElementById("autofix").click();
+    await new Promise(r => setTimeout(r, 400));
+    const afterFix = document.querySelector('#cardList .card[data-i="0"] .title').value;
     return { before, rows,
       layouts: document.querySelectorAll("#cardList .layout option").length,
       edited: edits[1].title,
       enabled: !document.querySelector('#tabs button[data-p="cards"]').disabled,
       shown: !document.getElementById("p-cards").hidden,
       flagged: document.querySelectorAll("#cardList .body.bad").length,
-      why: document.querySelector('#cardList .card[data-i="0"] .why').textContent };
+      why: document.querySelector('#cardList .card[data-i="0"] .why').textContent, fact, afterFix };
   })()`);
   if (ed.before !== true) errors.push("카드 탭이 처음부터 활성화돼 있다");
   if (!ed.enabled) errors.push("실행 후에도 카드 탭이 잠겨 있다");
@@ -69,7 +75,9 @@ app.whenReady().then(async () => {
   if (ed.edited !== "고친 제목") errors.push("편집 내용이 수집되지 않는다");
   if (ed.flagged < 1) errors.push("AI 티가 있는 카드에 표시가 안 된다");
   if (!/D-4|D-6/.test(ed.why)) errors.push(`위반 사유가 안 붙는다: ${ed.why}`);
-  console.log(`  카드 편집기: ${ed.rows}행, 위반 표시 ${ed.flagged}건 (${ed.why.slice(0, 40)})`);
+  if (!/FACT/.test(ed.fact)) errors.push(`숫자 환각이 편집기에서 안 잡힌다: ${ed.fact}`);
+  if (ed.afterFix.includes("🔥")) errors.push("자동 교정이 이모지를 못 지웠다");
+  console.log(`  카드 편집기: ${ed.rows}행, 위반 ${ed.flagged}건, 숫자 대조 동작, 자동 교정 후 "${ed.afterFix}"`);
 
   // 게시 문안 패널 — X 가중치 계산과 탭 전환까지 확인한다
   const caps = await win.webContents.executeJavaScript(`(() => {

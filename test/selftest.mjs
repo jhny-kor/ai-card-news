@@ -4,8 +4,9 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { zipSync, strToU8 } from "fflate";
-import { lint, repairPrompt } from "../src/lib/lint.js";
-import { parseCards, endpoint, buildPrompt } from "../src/lib/llm.js";
+import { lint, autofix, repairPrompt } from "../src/lib/lint.js";
+import { checkNumbers, numbers } from "../src/lib/facts.js";
+import { parseCards, endpoint, buildPrompt, looseJson } from "../src/lib/llm.js";
 import { readSource, filterImages } from "../src/lib/parse.js";
 import { attachImages } from "../src/lib/images.js";
 import { resolveFont, fontOptions, fontVars, DEFAULT_FONT } from "../src/lib/fonts.js";
@@ -309,6 +310,82 @@ await test("프롬프트에 고른 플랫폼의 규칙만 들어간다", () => {
   assert.ok(p.includes("X —") && p.includes("280자"), "X 규칙이 없다");
   assert.ok(!p.includes("인스타그램 —"), "고르지 않은 플랫폼이 들어갔다");
   assert.ok(p.includes("이모지를 쓰지 마라"), "AI 티 규칙이 없다");
+});
+
+// --------------------------------------------------------------- 약한 모델 보완 (1) 숫자 환각
+
+const SRC = "2024년 전세사기 피해는 1,234건이었고 열람 수수료는 700원이다. 평균 보증금은 1억 2천만원.";
+
+await test("자료에 없는 숫자를 잡는다", () => {
+  const got = checkNumbers([{ title: "10만 명이 선택", body: "피해액 5조원" }], SRC);
+  assert.deepEqual(got.map((i) => i.sample), ["10만 명", "5조원"]);   // 단위까지 보여준다
+  assert.equal(got[0].id, "FACT");
+});
+
+await test("자료에 있는 숫자는 통과한다", () => {
+  // 1,234 와 1234 는 같은 값이다
+  assert.deepEqual(checkNumbers([{ title: "700원", body: "2024년 1234건" }], SRC), []);
+});
+
+await test("번호 매기기는 환각으로 보지 않는다", () => {
+  assert.deepEqual(checkNumbers([{ title: "세 가지", body: "1. 을구  2. 갑구  3. 전입세대" }], SRC), []);
+  // 단위가 붙으면 작은 수라도 검사한다
+  assert.equal(checkNumbers([{ title: "3건 발생", body: "" }], SRC).length, 1);
+});
+
+await test("숫자를 자릿수까지 한 덩어리로 읽는다", () => {
+  assert.deepEqual(numbers("10만 명").map((x) => x.key), ["10만"]);
+  assert.deepEqual(numbers("1,234건").map((x) => x.key), ["1234"]);
+  assert.deepEqual(numbers("99.9%").map((x) => x.key), ["99.9"]);
+});
+
+// --------------------------------------------------------------- 약한 모델 보완 (2) 자동 교정
+
+await test("기계적으로 안전한 위반은 코드가 고친다", () => {
+  const { cards, applied } = autofix([
+    { title: "전세사기 🔥 주의", body: "계약을 **꼼꼼히** 보고, 등기부를 떼면 안전하다고 판단되어진다 ." },
+  ]);
+  assert.equal(cards[0].title, "전세사기 주의");
+  assert.equal(cards[0].body, "계약을 꼼꼼히 보고 등기부를 떼면 안전하다고 판단된다.");
+  assert.ok(applied.length >= 4, `고친 게 ${applied.length}건뿐이다`);
+  assert.deepEqual(lint(cards), [], "자동 교정 후에도 위반이 남았다");
+});
+
+await test("뜻이 바뀔 규칙은 건드리지 않는다", () => {
+  // hype 어휘와 대구법은 사람이나 LLM이 다시 써야 한다. 코드가 지우면 문장이 무너진다.
+  const bad = [{ title: "혁신적인 도구", body: "단순한 도구가 아니라 파트너입니다" }];
+  const { cards, applied } = autofix(bad);
+  assert.deepEqual(cards, bad);
+  assert.equal(applied.length, 0);
+  assert.ok(lint(cards).some((i) => i.id === "D-4"), "린터는 여전히 잡아야 한다");
+});
+
+// --------------------------------------------------------------- 약한 모델 보완 (3) JSON 복구
+
+await test("작은 모델이 흔히 깨뜨리는 JSON을 복구한다", () => {
+  const cases = {
+    "코드펜스와 설명": '알겠습니다!\n```json\n[{"title":"가"}]\n```\n도움이 되셨길',
+    "후행 쉼표": '[{"title":"가"},{"title":"나"},]',
+    "객체 하나만": '{"title":"가"}',
+    "중간에 끊김": '[{"title":"가"},{"title":"나"},{"title":"다","bo',
+    "작은따옴표 키": "[{'title':\"가\"}]",
+    "닫히지 않은 think": '<think>어떻게 할까 [{"title":"가"}]',
+    "정상 think": '<think>고민</think>[{"title":"가"},{"title":"나"}]',
+  };
+  for (const [name, reply] of Object.entries(cases))
+    assert.ok(parseCards(reply).length >= 1, `복구 실패: ${name}`);
+  assert.equal(parseCards(cases["중간에 끊김"]).length, 2, "끊긴 뒤 완성된 것까지만 남겨야 한다");
+});
+
+await test("객체 안의 배열을 배열로 오인하지 않는다", () => {
+  // 게시 문안은 {"x":{"tags":[...]}} 형태다. [ 가 먼저 보인다고 배열로 읽으면 통째로 실패한다.
+  const got = looseJson('{"x":{"text":"본문","tags":["전세"]}}');
+  assert.equal(got.length, 1);
+  assert.equal(got[0].x.text, "본문");
+});
+
+await test("복구할 수 없으면 분명히 실패한다", () => {
+  assert.throws(() => parseCards("죄송합니다 답변할 수 없습니다"), /JSON을 찾지 못했습니다/);
 });
 
 console.log(`\n${n}개 통과`);

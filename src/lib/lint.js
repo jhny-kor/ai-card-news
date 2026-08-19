@@ -21,6 +21,33 @@ function lengthCV(cards) {
   return sd / mean;
 }
 
+/**
+ * 기계적으로 안전한 위반만 코드가 직접 고친다.
+ * 이걸 LLM에게 되물으면 느린 로컬 모델에서 호출 한 번을 통째로 버리게 된다.
+ * 뜻이 바뀔 여지가 있는 규칙(hype 어휘, 대구법 등)은 손대지 않고 린터가 잡게 둔다.
+ */
+export function autofix(cards, rules = RULES) {
+  const applied = [];
+  const out = cards.map((card, i) => {
+    const next = { ...card };
+    for (const field of ["title", "body"]) {
+      let text = next[field];
+      if (typeof text !== "string") continue;
+      for (const rule of rules.autofix || []) {
+        const re = new RegExp(rule.pattern, rule.flags || "g");
+        const fixed = text.replace(re, rule.replace);
+        if (fixed !== text) {
+          applied.push({ id: rule.id, where: `${i + 1}번 카드`, why: rule.why });
+          text = fixed;
+        }
+      }
+      next[field] = text.trim();
+    }
+    return next;
+  });
+  return { cards: out, applied };
+}
+
 export function lint(cards, rules = RULES) {
   const issues = [];
   const add = (id, msg, where, sample) => issues.push({ id, msg, where, sample });

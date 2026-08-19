@@ -1,6 +1,6 @@
 {
   "name": "cardnews",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "로컬 LLM 기반 카드뉴스 생성기",
   "author": "cardnews",
   "main": "src/main.js",

@@ -42,12 +42,61 @@ image_hint: 그 카드 뒤에 깔 **배경 질감**을 영어 명사구로. 주�
 ${text.slice(0, 12000)}`;
 }
 
+/**
+ * 작은 모델은 JSON을 자주 깨뜨린다. 한 번 실패했다고 버리면 전체 실행이 날아가므로
+ * 흔한 고장을 순서대로 복구해본다. 되살릴 수 없을 때만 포기한다.
+ */
+export function looseJson(reply) {
+  let text = String(reply ?? "")
+    .replace(/<think>[\s\S]*?<\/think>/g, "")        // qwen3 추론 블록
+    .replace(/```(?:json|javascript)?/gi, "")         // 코드펜스
+    .replace(/```/g, "")
+    .trim();
+
+  // <think> 가 닫히지 않은 채 JSON이 뒤따르기도 한다. 뒤를 통째로 자르면 멀쩡한 답을 버린다.
+  const open = text.lastIndexOf("<think>");
+  if (open >= 0) {
+    const after = text.slice(open);
+    const json = after.search(/[[{]/);
+    text = json >= 0 ? text.slice(open + json) : text.slice(0, open);
+  }
+
+  const arr = text.indexOf("[");
+  const obj = text.indexOf("{");
+  if (arr < 0 && obj < 0) throw new Error(`응답에서 JSON을 찾지 못했습니다:\n${text.slice(0, 400)}`);
+
+  // 먼저 나오는 쪽이 진짜 시작이다. 객체 안에 배열이 들어 있는 경우(게시 문안)를
+  // 배열로 오인하면 통째로 파싱에 실패한다.
+  const isArray = arr >= 0 && (obj < 0 || arr < obj);
+  const body = isArray ? text.slice(arr) : `[${text.slice(obj)}]`;
+
+  const tries = [
+    body,
+    body.replace(/,\s*([\]}])/g, "$1"),                                  // 후행 쉼표
+    body.replace(/,\s*([\]}])/g, "$1").replace(/([{,]\s*)'([^']+)'\s*:/g, '$1"$2":'),  // 작은따옴표 키
+    truncateToLast(body),                                                // 잘린 응답
+    truncateToLast(body.replace(/,\s*([\]}])/g, "$1")),
+  ];
+  for (const candidate of tries) {
+    if (!candidate) continue;
+    try {
+      const out = JSON.parse(candidate);
+      if (Array.isArray(out)) return out;
+      if (out && typeof out === "object") return [out];
+    } catch { /* 다음 전략 */ }
+  }
+  throw new Error(`JSON을 복구하지 못했습니다:\n${body.slice(0, 400)}`);
+}
+
+/** 응답이 중간에 끊겼을 때 마지막으로 완성된 객체까지만 남기고 배열을 닫는다 */
+function truncateToLast(body) {
+  const last = body.lastIndexOf("}");
+  if (last < 0) return null;
+  return body.slice(0, last + 1).replace(/,\s*$/, "") + "]";
+}
+
 export function parseCards(reply) {
-  const clean = reply.replace(/<think>[\s\S]*?<\/think>/g, "");   // qwen3 추론 블록
-  const m = clean.match(/\[[\s\S]*\]/);
-  if (!m) throw new Error(`응답에서 JSON을 찾지 못했습니다:\n${clean.slice(0, 400)}`);
-  const cards = JSON.parse(m[0]);
-  return cards
+  return looseJson(reply)
     .filter((c) => c && typeof c === "object" && c.title)
     .map((c) => ({ ...c, layout: LAYOUTS.includes(c.layout) ? c.layout : "statement" }));
 }

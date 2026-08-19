@@ -52,6 +52,22 @@
       "msg": "대시 부가설명 반복. 쉼표나 별도 문장으로 분해해라" }
   ],
 
+  "_autofix": "기계적으로 안전한 것만. 뜻이 바뀔 여지가 있으면 넣지 말고 린터가 잡게 둔다",
+  "autofix": [
+    { "id": "C-5",  "pattern": "\\p{Extended_Pictographic}\\uFE0F?", "flags": "gu", "replace": "", "why": "이모지 삭제" },
+    { "id": "J-1",  "pattern": "\\*\\*(.+?)\\*\\*", "flags": "g", "replace": "$1", "why": "마크다운 볼드 해제" },
+    { "id": "C-11", "pattern": "([가-힣])(며|지만|면서|아서|어서|라서),", "flags": "g", "replace": "$1$2", "why": "연결어미 뒤 쉼표 삭제" },
+    { "id": "C-11", "pattern": "(하|되|있|없|만들|넣|받|주|보|가|오|알|살|먹|찾|쓰|늘|줄|맞|같|많|좋|이루|시키)고,", "flags": "g", "replace": "$1고", "why": "연결어미 뒤 쉼표 삭제" },
+    { "id": "C-11", "pattern": "(그리고|하지만|또한|따라서|그러나|그런데),\\s*", "flags": "g", "replace": "$1 ", "why": "접속사 뒤 쉼표 삭제" },
+    { "id": "A-8",  "pattern": "되어진다", "flags": "g", "replace": "된다", "why": "이중 피동" },
+    { "id": "A-8",  "pattern": "되어집니다", "flags": "g", "replace": "됩니다", "why": "이중 피동" },
+    { "id": "A-8",  "pattern": "보여진다", "flags": "g", "replace": "보인다", "why": "이중 피동" },
+    { "id": "A-8",  "pattern": "보여집니다", "flags": "g", "replace": "보입니다", "why": "이중 피동" },
+    { "id": "A-8",  "pattern": "생각되어진다", "flags": "g", "replace": "생각된다", "why": "이중 피동" },
+    { "id": "FMT",  "pattern": "[ \\t]{2,}", "flags": "g", "replace": " ", "why": "중복 공백" },
+    { "id": "FMT",  "pattern": "\\s+([.,!?])", "flags": "g", "replace": "$1", "why": "문장부호 앞 공백" }
+  ],
+
   "uniformity": {
     "minLengthCV": 0.15,
     "_minLengthCV": "본문 길이 변동계수. XDAC(ACL 2025) 기준 AI 단문은 길이가 균일하다. 금칙어로는 안 잡히는 최강 신호",

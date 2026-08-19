@@ -2,6 +2,8 @@
  *
  *  수치 출처는 README 참고. 플랫폼이 규칙을 바꾸면 이 표만 고치면 된다. */
 
+import { looseJson } from "./llm.js";
+
 export const PLATFORMS = [
   {
     id: "instagram", name: "인스타그램",
@@ -91,10 +93,9 @@ ${tone ? `\n톤: ${tone}\n` : ""}
 }
 
 export function parse(reply, ids) {
-  const clean = String(reply).replace(/<think>[\s\S]*?<\/think>/g, "");
-  const m = clean.match(/\{[\s\S]*\}/);
-  if (!m) throw new Error(`응답에서 JSON을 찾지 못했습니다:\n${clean.slice(0, 400)}`);
-  const raw = JSON.parse(m[0]);
+  // 카드와 같은 복구 로직을 쓴다 — 작은 모델은 여기서도 똑같이 JSON을 깨뜨린다
+  const raw = looseJson(reply)[0];
+  if (!raw || typeof raw !== "object") throw new Error("게시 문안 형식을 알아볼 수 없습니다");
   const out = {};
   for (const id of ids) {
     const v = raw[id];

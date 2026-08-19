@@ -3,7 +3,8 @@ import path from "node:path";
 import fs from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { collect } from "./lib/parse.js";
-import { lint, repairPrompt } from "./lib/lint.js";
+import { lint, autofix, repairPrompt } from "./lib/lint.js";
+import { checkNumbers } from "./lib/facts.js";
 import * as llm from "./lib/llm.js";
 import { attachImages } from "./lib/images.js";
 import * as social from "./lib/social.js";
@@ -65,7 +66,16 @@ async function run({ files, cfg }, log) {
   let cards = llm.parseCards(await llm.chat(cfg, llm.buildPrompt({ text, n: cfg.cards, flow: cfg.flow, tone: cfg.tone })));
   log(`카드 ${cards.length}장 생성`);
 
-  let issues = lint(cards);
+  // 기계적으로 안전한 건 코드가 먼저 고친다. 느린 로컬 모델에서 호출 한 번이 통째로 절약된다.
+  const fix = autofix(cards);
+  if (fix.applied.length) {
+    cards = fix.cards;
+    const kinds = [...new Set(fix.applied.map((a) => a.why))];
+    log(`자동 교정 ${fix.applied.length}건 — ${kinds.join(", ")}`);
+  }
+
+  // 자료에 없는 숫자를 지어냈는지 대조한다. 작은 모델의 가장 위험한 실패다.
+  let issues = [...lint(cards), ...checkNumbers(cards, text)];
   if (issues.length) {
     log(`AI 티 ${issues.length}건 발견 — 수리 요청`);
     for (const it of issues.slice(0, 8)) log(`  [${it.id}] ${it.where}: ${it.msg.split(".")[0]}`);
@@ -73,7 +83,7 @@ async function run({ files, cfg }, log) {
       const fixed = llm.parseCards(await llm.chat(cfg, repairPrompt(cards, issues)));
       if (fixed.length === cards.length) cards = fixed;
       else log("  수리 결과 장수가 달라 원본을 유지합니다");
-      const left = lint(cards);
+      const left = [...lint(cards), ...checkNumbers(cards, text)];
       log(left.length ? `수리 후 ${left.length}건 남음 (그대로 진행)` : "수리 후 위반 없음");
     } catch (e) {
       log(`  수리 실패, 원본으로 진행: ${e.message}`);
@@ -90,7 +100,7 @@ async function run({ files, cfg }, log) {
 
   const captions = await writeCaptions(cards, cfg, outDir, log);
 
-  lastRun = { cards, cfg, outDir };        // 이미지를 붙인 원본을 그대로 보관
+  lastRun = { cards, cfg, outDir, text };  // 이미지와 원문을 함께 보관 (재렌더·숫자 대조용)
   log(`완료 — ${outDir}`);
   return { files: out, cards: cards.map(({ image, ...c }) => c), outDir, captions };
 }
@@ -107,6 +117,12 @@ async function writeCaptions(cards, cfg, outDir, log) {
   } catch (e) {
     log(`  게시 문안 실패: ${e.message}`);
     return {};
+  }
+
+  // 게시 문안에도 같은 자동 교정을 먹인다
+  for (const [id, cap] of Object.entries(captions)) {
+    const f = autofix([{ title: "", body: cap.text }]);
+    if (f.applied.length) { captions[id].text = f.cards[0].body; log(`  ${id}: 자동 교정 ${f.applied.length}건`); }
   }
 
   // 플랫폼 규칙 + 문장의 AI 티를 함께 본다
@@ -205,7 +221,10 @@ app.whenReady().then(() => {
   ipcMain.handle("imageConfig", (_e, cfg) => llm.imageConfig(cfg));
   ipcMain.handle("preview", (_e, card, templates, font) => previewTemplates(card, templates, font));
   ipcMain.handle("open", (_e, p) => shell.openPath(p));
-  ipcMain.handle("lint", (_e, cards) => lint(cards));      // 정규식이라 즉시 끝난다
+  // 편집 중에도 즉시 돈다. 숫자 대조는 마지막 실행의 원문과 비교한다.
+  ipcMain.handle("lint", (_e, cards) =>
+    [...lint(cards), ...(lastRun ? checkNumbers(cards, lastRun.text) : [])]);
+  ipcMain.handle("autofix", (_e, cards) => autofix(cards));
 
   ipcMain.handle("rerender", async (_e, edits) => {
     try { return { ok: true, ...(await rerender(edits, log)) }; }

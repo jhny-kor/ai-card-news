@@ -226,6 +226,17 @@ $("recheck").onclick = async () => {
     : "AI 티 없음";
 };
 
+/** 기계적으로 안전한 것만 코드가 고친다. 편집 중에 눌러도 뜻이 바뀌지 않는다. */
+$("autofix").onclick = async () => {
+  const { cards, applied } = await window.api.autofix(collectEdits());
+  if (!applied.length) return ($("editNote").textContent = "자동으로 고칠 게 없습니다");
+  document.querySelectorAll("#cardList .card").forEach((el, i) => {
+    el.querySelector(".title").value = cards[i].title || "";
+    el.querySelector(".body").value = cards[i].body || "";
+  });
+  $("editNote").textContent = `${applied.length}건 교정 — ${[...new Set(applied.map((a) => a.why))].join(", ")}`;
+};
+
 $("rerender").onclick = async () => {
   $("rerender").disabled = true;
   const r = await window.api.rerender(collectEdits());
