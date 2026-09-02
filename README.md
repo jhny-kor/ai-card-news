@@ -127,9 +127,30 @@ certutil -hashfile cardnews-setup-0.1.0.exe SHA256
 
 `반입정보.txt`의 SHA-256과 같아야 한다. 그다음 실행한다.
 
-- **관리자 권한이 필요 없다.** 사용자 계정 폴더에 설치된다
+- 기본은 **관리자 권한 없이** 사용자 계정 폴더에 설치된다.
+  설치 화면에서 **"모든 사용자용"** 을 고르면 Program Files로 들어간다(관리자 권한 필요)
 - 서명하지 않은 파일이라 SmartScreen 경고가 뜬다 → **추가 정보 → 실행**
 - 설치·실행에 인터넷이 필요 없다. 모든 의존물이 exe 안에 있다
+
+#### PC마다 실행이 되고 안 되고 갈릴 때
+
+먼저 실행 안 되는 PC에서 진단을 돌린다. 아무것도 설치하지 않고 읽기만 한다.
+
+```powershell
+powershell -ExecutionPolicy Bypass -File diagnose.ps1
+```
+
+| 원인 | 증상 | 대응 |
+|---|---|---|
+| **정책이 사용자 폴더 실행을 차단**(AppLocker/SRP) | 설치는 되는데 눌러도 반응 없음 | 설치를 다시 하며 **"모든 사용자용 설치"** 선택 (관리자 권한 필요). Program Files로 들어가 차단을 피한다 |
+| **Windows 10 미만** | 실행 자체가 안 됨 | Electron 33은 Win10 이상만 지원한다. Win7/8/8.1은 방법이 없다 |
+| **백신이 격리** | 파일이 사라짐 | 서명이 없어서다. 예외 등록을 요청한다 |
+| **그래픽 드라이버** | 창은 뜨는데 흰 화면 | `CardNews.exe --safe` 로 실행(가속 끔) |
+| **ARM64 PC** | 실행이 느리거나 실패 | x64 빌드라 에뮬레이션으로 돈다 |
+
+앱은 실행될 때마다 `%APPDATA%\cardnews\logs\startup.log` 에 한 줄을 남긴다.
+**이 파일이 아예 없으면 앱이 시작조차 못 한 것**이고(차단·버전 문제),
+있는데 창이 안 보이면 그 뒤가 문제다(그래픽). 진단 스크립트가 이걸 같이 본다.
 
 ### 3) 첫 실행 설정
 
@@ -221,6 +242,7 @@ npx electron test/render-test.mjs      # 렌더 8종 × 7장 — test/out/ 에 �
 npx electron test/ui-test.mjs          # UI 스모크
 npx electron test/shot.mjs             # README용 화면 캡처 갱신
 npm run check:ps1                      # .ps1 문법 + BOM 검사 (pwsh 필요)
+powershell -File diagnose.ps1          # 실행 안 되는 PC 진단 (윈도우)
 ```
 
 윈도우 스크립트는 맥에서 고치기 쉬워서 `check:ps1` 로 문법을 확인하고 올린다.

@@ -1,10 +1,11 @@
-﻿# .ps1 파일 문법 검사. 맥/리눅스에서 pwsh로 돌려도 된다.
+﻿﻿# .ps1 파일 문법 검사. 맥/리눅스에서 pwsh로 돌려도 된다.
 # 윈도우 스크립트를 검증 없이 올렸다가 파서 에러로 시간을 버린 적이 있어서 넣었다.
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 $bad = 0
+# -Filter *.ps1 은 한글 파일명을 건너뛴다. 조용히 빠뜨리면 검사한 줄 알게 되므로 확장자로 직접 거른다.
 
-foreach ($f in Get-ChildItem $root -Filter *.ps1 -Recurse -File) {
+foreach ($f in Get-ChildItem $root -Recurse -File | Where-Object { $_.Extension -eq ".ps1" }) {
     # BOM 확인 — Windows PowerShell 5.1은 BOM 없는 .ps1을 시스템 ANSI로 읽어 한글이 깨진다
     $head = [byte[]]::new(3)
     $fs = [IO.File]::OpenRead($f.FullName)

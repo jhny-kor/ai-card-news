@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain, dialog, shell, safeStorage } from "electro
 import path from "node:path";
 import fs from "node:fs/promises";
 import { fileURLToPath } from "node:url";
+import os from "node:os";
 import { collect } from "./lib/parse.js";
 import { lint, autofix, repairPrompt } from "./lib/lint.js";
 import { checkNumbers } from "./lib/facts.js";
@@ -11,6 +12,29 @@ import * as social from "./lib/social.js";
 import { renderCards, listTemplates, previewTemplates, closeRenderWindow } from "./lib/render.js";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
+
+// PC마다 실행 여부가 갈릴 때 근거가 필요하다. 실행되면 흔적을 남긴다 —
+// 로그 파일이 아예 없으면 앱이 시작조차 못 한 것이고, 있으면 그 뒤가 문제다.
+const SAFE_MODE = process.argv.includes("--safe");
+if (SAFE_MODE) app.disableHardwareAcceleration();   // GPU 드라이버 문제로 흰 창이 뜰 때
+
+async function writeStartupLog(extra = "") {
+  try {
+    const dir = path.join(app.getPath("userData"), "logs");
+    await fs.mkdir(dir, { recursive: true });
+    const line = [
+      new Date().toISOString(),
+      `v${app.getVersion()}`,
+      `${process.platform}/${process.arch}`,
+      `win=${os.release()}`,
+      `electron=${process.versions.electron}`,
+      SAFE_MODE ? "safe-mode" : "gpu-on",
+      `exe=${process.execPath}`,
+      extra,
+    ].join("  ");
+    await fs.appendFile(path.join(dir, "startup.log"), line + "\n", "utf8");
+  } catch { /* 로그 실패로 앱을 막지 않는다 */ }
+}
 const SETTINGS = () => path.join(app.getPath("userData"), "settings.json");
 
 const DEFAULTS = {
@@ -196,7 +220,11 @@ function createWindow() {
 
 const log = (msg) => mainWindow?.webContents.send("log", String(msg));
 
+app.on("child-process-gone", (_e, d) => writeStartupLog(`child-gone ${d.type} ${d.reason}`));
+app.on("render-process-gone", (_e, _w, d) => writeStartupLog(`render-gone ${d.reason}`));
+
 app.whenReady().then(() => {
+  writeStartupLog("ready");
   ipcMain.handle("settings:get", loadSettings);
   ipcMain.handle("settings:set", (_e, cfg) => saveSettings(cfg));
   ipcMain.handle("templates:list", listTemplates);
@@ -221,6 +249,7 @@ app.whenReady().then(() => {
   ipcMain.handle("imageConfig", (_e, cfg) => llm.imageConfig(cfg));
   ipcMain.handle("preview", (_e, card, templates, font) => previewTemplates(card, templates, font));
   ipcMain.handle("open", (_e, p) => shell.openPath(p));
+  ipcMain.handle("logdir", () => shell.openPath(path.join(app.getPath("userData"), "logs")));
   // 편집 중에도 즉시 돈다. 숫자 대조는 마지막 실행의 원문과 비교한다.
   ipcMain.handle("lint", (_e, cards) =>
     [...lint(cards), ...(lastRun ? checkNumbers(cards, lastRun.text) : [])]);

@@ -28,9 +28,11 @@ win:
 
 nsis:
   oneClick: false
-  perMachine: false                  # 관리자 권한 없이 설치 — 폐쇄망 PC에서 중요
+  # 기본은 사용자 폴더 설치(관리자 권한 불필요)지만, 설치 화면에서 "모든 사용자"를 고를 수 있다.
+  # AppLocker 같은 정책이 %LOCALAPPDATA% 실행을 막는 PC에서는 Program Files 설치가 유일한 길이다.
+  perMachine: false
   allowToChangeInstallationDirectory: true
-  allowElevation: false
+  allowElevation: true
   createDesktopShortcut: true
   createStartMenuShortcut: true
   shortcutName: 카드뉴스 생성기
